@@ -1,0 +1,267 @@
+openapi: 3.0.3
+info:
+  title: Authentication API
+  description: Magic link authentication endpoints via Supabase
+  version: 1.0.0
+
+paths:
+  /auth/magic-link:
+    post:
+      summary: Send magic link
+      description: Send a magic link to the user's email for authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MagicLinkRequest'
+      responses:
+        '200':
+          description: Magic link sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MagicLinkResponse'
+        '400':
+          description: Invalid email format
+        '429':
+          description: Rate limit exceeded
+
+  /auth/verify:
+    post:
+      summary: Verify magic link token
+      description: Verify the magic link token and return session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTokenRequest'
+      responses:
+        '200':
+          description: Token verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid or expired token
+        '401':
+          description: Token verification failed
+
+  /auth/session:
+    get:
+      summary: Get current session
+      description: Retrieve current user session information
+      security:
+        - supabaseAuth: []
+      responses:
+        '200':
+          description: Current session
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          description: No active session
+
+  /auth/logout:
+    post:
+      summary: Logout user
+      description: End the current user session
+      security:
+        - supabaseAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutResponse'
+        '401':
+          description: No active session
+
+  /auth/user:
+    get:
+      summary: Get user profile
+      description: Get the current user's profile information
+      security:
+        - supabaseAuth: []
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          description: Unauthorized
+
+    delete:
+      summary: Delete user account
+      description: Permanently delete the user account and all associated data
+      security:
+        - supabaseAuth: []
+      responses:
+        '204':
+          description: Account deleted successfully
+        '401':
+          description: Unauthorized
+        '400':
+          description: Cannot delete account with active shares
+
+components:
+  schemas:
+    MagicLinkRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email address to send magic link to
+        redirect_to:
+          type: string
+          format: uri
+          description: URL to redirect to after successful authentication
+          default: "/"
+      required:
+        - email
+
+    MagicLinkResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Magic link sent to your email"
+        email:
+          type: string
+          format: email
+      required:
+        - message
+        - email
+
+    VerifyTokenRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Magic link token from email
+        type:
+          type: string
+          enum: [magiclink]
+          default: magiclink
+      required:
+        - token
+        - type
+
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: Refresh token
+        expires_in:
+          type: integer
+          description: Token expiration in seconds
+        token_type:
+          type: string
+          example: "bearer"
+        user:
+          $ref: '#/components/schemas/UserProfile'
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+        - token_type
+        - user
+
+    SessionResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Current JWT access token
+        refresh_token:
+          type: string
+          description: Current refresh token
+        expires_at:
+          type: integer
+          description: Token expiration timestamp
+        user:
+          $ref: '#/components/schemas/UserProfile'
+      required:
+        - access_token
+        - expires_at
+        - user
+
+    LogoutResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "Logged out successfully"
+      required:
+        - message
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User's unique identifier
+        email:
+          type: string
+          format: email
+          description: User's email address
+        created_at:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last profile update timestamp
+        email_confirmed_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Email confirmation timestamp
+        last_sign_in_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last sign in timestamp
+      required:
+        - id
+        - email
+        - created_at
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        message:
+          type: string
+          description: Detailed error description
+        code:
+          type: string
+          description: Error code
+      required:
+        - error
+        - message
+
+  securitySchemes:
+    supabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Supabase JWT token obtained from magic link authentication
+
+security:
+  - supabaseAuth: []
