@@ -106,8 +106,8 @@ export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalPro
                 <input
                   type="radio"
                   name="role"
-                  value="write"
-                  checked={role === 'write'}
+                  value="edit"
+                  checked={role === 'edit'}
                   onChange={(e) => setRole(e.target.value as ShareRole)}
                   className="mr-2"
                   disabled={isLoading}

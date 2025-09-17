@@ -38,7 +38,10 @@ export class AuthService {
       }
 
       return {
-        user: session?.user || null,
+        user: session?.user ? {
+          id: session.user.id,
+          email: session.user.email!
+        } : null,
         session,
         error: null
       }

@@ -12,7 +12,7 @@ export function ListView() {
   const [showShareModal, setShowShareModal] = useState(false)
   
   const { currentList, isLoading, error, fetchList, deleteList } = useListsStore()
-  const { createItem } = useItemsStore()
+  const { createItem: _ } = useItemsStore()
 
   useEffect(() => {
     if (id) {

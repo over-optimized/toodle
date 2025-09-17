@@ -9,7 +9,7 @@ import type {
   UpdateItemRequest,
   CreateShareRequest,
   ListWithItems,
-  PaginatedResponse
+  Database
 } from '../types'
 
 export class ApiService {
@@ -37,8 +37,8 @@ export class ApiService {
         .eq('id', id)
         .single()
 
-      if (listError) {
-        return { data: null, error: listError.message }
+      if (listError || !list) {
+        return { data: null, error: listError?.message || 'List not found' }
       }
 
       const { data: items, error: itemsError } = await supabase
@@ -52,7 +52,7 @@ export class ApiService {
       }
 
       return {
-        data: { ...list, items: items || [] },
+        data: { ...(list as List), items: items || [] },
         error: null
       }
     } catch (error) {
@@ -70,14 +70,16 @@ export class ApiService {
         return { data: null, error: 'User not authenticated' }
       }
 
+      const listInsert: Database['public']['Tables']['lists']['Insert'] = {
+        user_id: user.id,
+        title: request.title,
+        type: request.type,
+        is_private: request.is_private ?? true
+      }
+
       const { data, error } = await supabase
         .from('lists')
-        .insert({
-          user_id: user.id,
-          title: request.title,
-          type: request.type,
-          is_private: request.is_private ?? true
-        })
+        .insert(listInsert as any)
         .select()
         .single()
 
@@ -92,7 +94,7 @@ export class ApiService {
 
   async updateList(id: string, request: UpdateListRequest): Promise<{ data: List | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('lists')
         .update(request)
         .eq('id', id)
@@ -135,7 +137,7 @@ export class ApiService {
           position,
           target_date: request.target_date,
           is_completed: false
-        })
+        } as any)
         .select()
         .single()
 
@@ -158,9 +160,9 @@ export class ApiService {
         updateData.completed_at = null
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('items')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
         .single()
@@ -204,7 +206,7 @@ export class ApiService {
           shared_with_email: request.shared_with_email,
           role: request.role,
           expires_at: request.expires_at
-        })
+        } as any)
         .select()
         .single()
 
@@ -225,7 +227,7 @@ export class ApiService {
       .order('position', { ascending: false })
       .limit(1)
 
-    return (data?.[0]?.position || 0) + 1
+    return ((data as any)?.[0]?.position || 0) + 1
   }
 }
 

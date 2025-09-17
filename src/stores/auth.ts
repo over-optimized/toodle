@@ -1,19 +1,17 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import type { User } from '@supabase/supabase-js'
 import { authService } from '../services/auth'
 
 interface AuthState {
-  user: User | null
+  user: { id: string; email: string } | null
   isLoading: boolean
   isAuthenticated: boolean
   signInWithMagicLink: (email: string, redirectTo?: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   initialize: () => Promise<void>
-  setUser: (user: User | null) => void
+  setUser: (user: { id: string; email: string } | null) => void
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isLoading: true,
   isAuthenticated: false,
@@ -42,14 +40,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     authService.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
-        set({ user: session.user, isAuthenticated: true })
+        set({
+          user: { id: session.user.id, email: session.user.email! },
+          isAuthenticated: true
+        })
       } else if (event === 'SIGNED_OUT') {
         set({ user: null, isAuthenticated: false })
       }
     })
   },
 
-  setUser: (user: User | null) => {
+  setUser: (user: { id: string; email: string } | null) => {
     set({ user, isAuthenticated: !!user })
   }
 }))

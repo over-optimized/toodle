@@ -1,6 +1,9 @@
 import { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ErrorBoundary } from 'react-error-boundary'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores'
 import { LoginForm, AuthCallback, ProtectedRoute } from './components/auth'
 import { ListsOverview, ListView } from './components/lists'
@@ -30,44 +33,47 @@ function App() {
   }, [initialize])
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Routes>
-            <Route
-              path="/login"
-              element={
-                isAuthenticated ? <Navigate to="/" replace /> : <LoginForm />
-              }
-            />
-            <Route
-              path="/auth/callback"
-              element={<AuthCallback />}
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <ListsOverview />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/lists/:id"
-              element={
-                <ProtectedRoute>
-                  <ListView />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="*"
-              element={<Navigate to="/" replace />}
-            />
-          </Routes>
-        </div>
-      </Router>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <Router>
+          <div className="min-h-screen bg-gray-50">
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  isAuthenticated ? <Navigate to="/" replace /> : <LoginForm />
+                }
+              />
+              <Route
+                path="/auth/callback"
+                element={<AuthCallback />}
+              />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <ListsOverview />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lists/:id"
+                element={
+                  <ProtectedRoute>
+                    <ListView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="*"
+                element={<Navigate to="/" replace />}
+              />
+            </Routes>
+          </div>
+        </Router>
+      </ErrorBoundary>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   )
 }
 

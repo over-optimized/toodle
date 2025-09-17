@@ -1,55 +1,11 @@
-export type ListType = 'simple' | 'grocery' | 'countdown'
-export type ShareRole = 'read' | 'write'
+import type { User } from './user'
+import type { List, ListType } from './list'
+import type { Item, ItemHistory } from './item'
+import type { Share, ShareRole } from './share'
 
-export interface User {
-  id: string
-  email: string
-  display_name?: string
-  created_at: string
-  updated_at: string
-}
+export type { User, List, ListType, Item, ItemHistory, Share, ShareRole }
 
-export interface List {
-  id: string
-  user_id: string
-  type: ListType
-  title: string
-  is_private: boolean
-  created_at: string
-  updated_at: string
-}
-
-export interface Item {
-  id: string
-  list_id: string
-  content: string
-  is_completed: boolean
-  position: number
-  target_date?: string
-  completed_at?: string
-  created_at: string
-  updated_at: string
-}
-
-export interface Share {
-  id: string
-  list_id: string
-  shared_by: string
-  shared_with_email: string
-  role: ShareRole
-  expires_at: string
-  created_at: string
-}
-
-export interface ItemHistory {
-  id: string
-  item_id: string
-  content: string
-  action: string
-  created_at: string
-}
-
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       users: {
@@ -77,6 +33,18 @@ export interface Database {
         Insert: Omit<ItemHistory, 'id' | 'created_at'>
         Update: never
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
 }
