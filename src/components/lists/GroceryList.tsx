@@ -67,7 +67,7 @@ export function GroceryList({ list }: GroceryListProps) {
   const [editContent, setEditContent] = useState('')
 
   const { data: items = [], isLoading, error } = useItems(list.id)
-  const { createItem, updateItem, deleteItem } = useItemMutations()
+  const { createItem, updateItem, deleteItem } = useItemMutations(list.id)
   const { otherUsers, onlineCount } = usePresence(list.id)
 
   // Enable real-time updates
@@ -85,11 +85,8 @@ export function GroceryList({ list }: GroceryListProps) {
       const itemWithCategory = `${newItemContent.trim()}|${category}`
 
       await createItem.mutateAsync({
-        listId: list.id,
-        item: {
-          content: itemWithCategory,
-          position
-        }
+        content: itemWithCategory,
+        position
       })
       setNewItemContent('')
       setSelectedCategory('')
@@ -102,7 +99,7 @@ export function GroceryList({ list }: GroceryListProps) {
     try {
       await updateItem.mutateAsync({
         id: itemId,
-        updates: { is_completed: !isCompleted }
+        request: { is_completed: !isCompleted }
       })
     } catch (error) {
       console.error('Failed to toggle item:', error)
@@ -206,45 +203,6 @@ export function GroceryList({ list }: GroceryListProps) {
         </div>
       )}
 
-      {/* Add new item form */}
-      <form onSubmit={handleAddItem} className="space-y-3">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItemContent}
-            onChange={(e) => setNewItemContent(e.target.value)}
-            placeholder="Add groceries (e.g., 'Milk', 'Bananas', 'Chicken')..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={createItem.isPending}
-          />
-          <button
-            type="submit"
-            disabled={createItem.isPending || !newItemContent.trim()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {createItem.isPending ? 'Adding...' : 'Add'}
-          </button>
-        </div>
-
-        {/* Category selection (optional override) */}
-        <div className="flex gap-2 flex-wrap">
-          <span className="text-sm text-gray-600 py-2">Category:</span>
-          {GROCERY_CATEGORIES.map(category => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => setSelectedCategory(selectedCategory === category.id ? '' : category.id)}
-              className={`px-2 py-1 text-xs rounded-full border transition-colors ${
-                selectedCategory === category.id
-                  ? `${category.color} border-current`
-                  : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
-              }`}
-            >
-              {category.icon} {category.name}
-            </button>
-          ))}
-        </div>
-      </form>
 
       {/* Shopping list by category */}
       {pendingCategories.map(category => {
@@ -273,9 +231,15 @@ export function GroceryList({ list }: GroceryListProps) {
                     <button
                       onClick={() => handleToggleComplete(item.id, item.is_completed)}
                       disabled={updateItem.isPending}
-                      className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+                      className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center"
                       aria-label="Mark as complete"
-                    />
+                    >
+                      {item.is_completed && (
+                        <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
 
                     <span className="flex-1 text-gray-900">{text}</span>
 
@@ -354,12 +318,54 @@ export function GroceryList({ list }: GroceryListProps) {
             🛒
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Empty grocery list</h3>
-          <p className="text-gray-500 mb-4">Add items to your shopping list to get started.</p>
+          <p className="text-gray-500 mb-4">Add items to your shopping list below.</p>
           <p className="text-sm text-gray-400">
             Items will be automatically organized by grocery store sections.
           </p>
         </div>
       )}
+
+      {/* Add new item form - moved to bottom */}
+      <div className="pt-4 border-t border-gray-200">
+        <form onSubmit={handleAddItem} className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={newItemContent}
+              onChange={(e) => setNewItemContent(e.target.value)}
+              placeholder="Add groceries (e.g., 'Milk', 'Bananas', 'Chicken')..."
+              className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={createItem.isPending}
+            />
+            <button
+              type="submit"
+              disabled={createItem.isPending || !newItemContent.trim()}
+              className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base sm:text-sm"
+            >
+              {createItem.isPending ? 'Adding...' : 'Add Item'}
+            </button>
+          </div>
+
+          {/* Category selection (optional override) */}
+          <div className="flex gap-2 flex-wrap">
+            <span className="text-sm text-gray-600 py-2">Category:</span>
+            {GROCERY_CATEGORIES.map(category => (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => setSelectedCategory(selectedCategory === category.id ? '' : category.id)}
+                className={`px-2 py-1 text-xs rounded-full border transition-colors ${
+                  selectedCategory === category.id
+                    ? `${category.color} border-current`
+                    : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
+                }`}
+              >
+                {category.icon} {category.name}
+              </button>
+            ))}
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

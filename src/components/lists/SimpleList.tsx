@@ -13,7 +13,7 @@ export function SimpleList({ list }: SimpleListProps) {
   const [editContent, setEditContent] = useState('')
 
   const { data: items = [], isLoading, error } = useItems(list.id)
-  const { createItem, updateItem, deleteItem } = useItemMutations()
+  const { createItem, updateItem, deleteItem } = useItemMutations(list.id)
   const { otherUsers, onlineCount } = usePresence(list.id)
 
   // Enable real-time updates
@@ -26,11 +26,8 @@ export function SimpleList({ list }: SimpleListProps) {
     try {
       const position = Math.max(...items.map(item => item.position), 0) + 1
       await createItem.mutateAsync({
-        listId: list.id,
-        item: {
-          content: newItemContent.trim(),
-          position
-        }
+        content: newItemContent.trim(),
+        position
       })
       setNewItemContent('')
     } catch (error) {
@@ -42,7 +39,7 @@ export function SimpleList({ list }: SimpleListProps) {
     try {
       await updateItem.mutateAsync({
         id: itemId,
-        updates: { is_completed: !isCompleted }
+        request: { is_completed: !isCompleted }
       })
     } catch (error) {
       console.error('Failed to toggle item:', error)
@@ -60,7 +57,7 @@ export function SimpleList({ list }: SimpleListProps) {
     try {
       await updateItem.mutateAsync({
         id: itemId,
-        updates: { content: editContent.trim() }
+        request: { content: editContent.trim() }
       })
       setEditingId(null)
       setEditContent('')
@@ -134,24 +131,6 @@ export function SimpleList({ list }: SimpleListProps) {
         </div>
       )}
 
-      {/* Add new item form */}
-      <form onSubmit={handleAddItem} className="flex gap-2">
-        <input
-          type="text"
-          value={newItemContent}
-          onChange={(e) => setNewItemContent(e.target.value)}
-          placeholder="Add a new item..."
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={createItem.isPending}
-        />
-        <button
-          type="submit"
-          disabled={createItem.isPending || !newItemContent.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {createItem.isPending ? 'Adding...' : 'Add'}
-        </button>
-      </form>
 
       {/* Pending items */}
       {pendingItems.length > 0 && (
@@ -168,35 +147,43 @@ export function SimpleList({ list }: SimpleListProps) {
                 <button
                   onClick={() => handleToggleComplete(item.id, item.is_completed)}
                   disabled={updateItem.isPending}
-                  className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                  className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center"
                   aria-label="Mark as complete"
-                />
+                >
+                  {item.is_completed && (
+                    <svg className="w-3 h-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
+                </button>
 
                 {editingId === item.id ? (
-                  <div className="flex-1 flex gap-2">
+                  <div className="flex-1 space-y-2">
                     <input
                       type="text"
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
-                      className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') handleSaveEdit(item.id)
                         if (e.key === 'Escape') handleCancelEdit()
                       }}
                     />
-                    <button
-                      onClick={() => handleSaveEdit(item.id)}
-                      className="px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancelEdit}
-                      className="px-2 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
-                    >
-                      Cancel
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleSaveEdit(item.id)}
+                        className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        className="flex-1 px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -280,9 +267,30 @@ export function SimpleList({ list }: SimpleListProps) {
             </svg>
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No items yet</h3>
-          <p className="text-gray-500">Start by adding your first item above.</p>
+          <p className="text-gray-500">Start by adding your first item below.</p>
         </div>
       )}
+
+      {/* Add new item form - moved to bottom */}
+      <div className="pt-4 border-t border-gray-200">
+        <form onSubmit={handleAddItem} className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={newItemContent}
+            onChange={(e) => setNewItemContent(e.target.value)}
+            placeholder="Add a new item..."
+            className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={createItem.isPending}
+          />
+          <button
+            type="submit"
+            disabled={createItem.isPending || !newItemContent.trim()}
+            className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base sm:text-sm"
+          >
+            {createItem.isPending ? 'Adding...' : 'Add Item'}
+          </button>
+        </form>
+      </div>
     </div>
   )
 }

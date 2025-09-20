@@ -52,7 +52,7 @@ export function CountdownList({ list }: CountdownListProps) {
   const [currentTime, setCurrentTime] = useState(new Date())
 
   const { data: items = [], isLoading, error } = useItems(list.id)
-  const { createItem, updateItem, deleteItem } = useItemMutations()
+  const { createItem, updateItem, deleteItem } = useItemMutations(list.id)
   const { otherUsers, onlineCount } = usePresence(list.id)
 
   // Enable real-time updates
@@ -82,12 +82,9 @@ export function CountdownList({ list }: CountdownListProps) {
       const position = Math.max(...items.map(item => item.position), 0) + 1
 
       await createItem.mutateAsync({
-        listId: list.id,
-        item: {
-          content: newItemContent.trim(),
-          position,
-          target_date: targetDate.toISOString()
-        }
+        content: newItemContent.trim(),
+        position,
+        target_date: targetDate.toISOString()
       })
       setNewItemContent('')
       setNewItemTargetDate('')
@@ -100,7 +97,7 @@ export function CountdownList({ list }: CountdownListProps) {
     try {
       await updateItem.mutateAsync({
         id: itemId,
-        updates: { is_completed: !isCompleted }
+        request: { is_completed: !isCompleted }
       })
     } catch (error) {
       console.error('Failed to toggle item:', error)
@@ -130,7 +127,7 @@ export function CountdownList({ list }: CountdownListProps) {
     try {
       await updateItem.mutateAsync({
         id: itemId,
-        updates
+        request: updates
       })
       setEditingId(null)
       setEditContent('')
@@ -216,38 +213,6 @@ export function CountdownList({ list }: CountdownListProps) {
         </div>
       )}
 
-      {/* Add new item form */}
-      <form onSubmit={handleAddItem} className="space-y-3">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItemContent}
-            onChange={(e) => setNewItemContent(e.target.value)}
-            placeholder="Add a deadline item (e.g., 'Submit project proposal')..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={createItem.isPending}
-          />
-          <input
-            type="datetime-local"
-            value={newItemTargetDate}
-            onChange={(e) => setNewItemTargetDate(e.target.value)}
-            min={minDateTime}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            disabled={createItem.isPending}
-            required
-          />
-          <button
-            type="submit"
-            disabled={createItem.isPending || !newItemContent.trim() || !newItemTargetDate}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {createItem.isPending ? 'Adding...' : 'Add'}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500">
-          Set deadlines for tasks, projects, or events to track time remaining.
-        </p>
-      </form>
 
       {/* Pending items with countdowns */}
       {pendingItems.length > 0 && (
@@ -273,37 +238,47 @@ export function CountdownList({ list }: CountdownListProps) {
                     <button
                       onClick={() => handleToggleComplete(item.id, item.is_completed)}
                       disabled={updateItem.isPending}
-                      className="w-5 h-5 border-2 border-current rounded-full hover:bg-current hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-current focus:ring-offset-2 disabled:opacity-50 mt-1"
+                      className="w-5 h-5 border-2 border-current rounded-full hover:bg-current hover:bg-opacity-10 focus:outline-none focus:ring-2 focus:ring-current focus:ring-offset-2 disabled:opacity-50 mt-1 flex items-center justify-center"
                       aria-label="Mark as complete"
-                    />
+                    >
+                      {item.is_completed && (
+                        <svg className="w-3 h-3 text-current" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
 
                     <div className="flex-1 space-y-2">
                       {editingId === item.id ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           <input
                             type="text"
                             value={editContent}
                             onChange={(e) => setEditContent(e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEdit(item.id)
+                              if (e.key === 'Escape') handleCancelEdit()
+                            }}
                           />
                           <input
                             type="datetime-local"
                             value={editTargetDate}
                             onChange={(e) => setEditTargetDate(e.target.value)}
                             min={minDateTime}
-                            className="px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleSaveEdit(item.id)}
-                              className="px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                              className="flex-1 px-3 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
                             >
                               Save
                             </button>
                             <button
                               onClick={handleCancelEdit}
-                              className="px-2 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700"
+                              className="flex-1 px-3 py-2 text-sm bg-gray-600 text-white rounded-md hover:bg-gray-700 font-medium"
                             >
                               Cancel
                             </button>
@@ -423,12 +398,49 @@ export function CountdownList({ list }: CountdownListProps) {
             ⏰
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">No deadlines yet</h3>
-          <p className="text-gray-500 mb-4">Add items with deadlines to track time remaining.</p>
+          <p className="text-gray-500 mb-4">Add items with deadlines below.</p>
           <p className="text-sm text-gray-400">
             Perfect for project deadlines, event planning, and time-sensitive tasks.
           </p>
         </div>
       )}
+
+      {/* Add new item form - moved to bottom */}
+      <div className="pt-4 border-t border-gray-200">
+        <form onSubmit={handleAddItem} className="space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input
+              type="text"
+              value={newItemContent}
+              onChange={(e) => setNewItemContent(e.target.value)}
+              placeholder="Add a deadline item (e.g., 'Submit project proposal')..."
+              className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={createItem.isPending}
+            />
+            <div className="flex gap-2">
+              <input
+                type="datetime-local"
+                value={newItemTargetDate}
+                onChange={(e) => setNewItemTargetDate(e.target.value)}
+                min={minDateTime}
+                className="flex-1 sm:flex-none px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={createItem.isPending}
+                required
+              />
+              <button
+                type="submit"
+                disabled={createItem.isPending || !newItemContent.trim() || !newItemTargetDate}
+                className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-base sm:text-sm"
+              >
+                {createItem.isPending ? 'Adding...' : 'Add'}
+              </button>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Set deadlines for tasks, projects, or events to track time remaining.
+          </p>
+        </form>
+      </div>
     </div>
   )
 }

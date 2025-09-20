@@ -69,21 +69,22 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Create New List</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+      <div className="bg-white rounded-t-lg sm:rounded-lg max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Create New List</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-2 -m-2"
+            aria-label="Close modal"
           >
             ✕
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
               List Title
             </label>
             <input
@@ -92,7 +93,7 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter list title"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={createList.isPending}
               required
             />
@@ -102,11 +103,11 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
             <label className="block text-sm font-medium text-gray-700 mb-3">
               List Type
             </label>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:space-y-3">
               {listTypes.map((listType) => (
                 <label
                   key={listType.value}
-                  className="flex items-start p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300"
+                  className="flex items-start p-3 sm:p-4 border border-gray-200 rounded-lg cursor-pointer hover:border-gray-300 active:bg-gray-50"
                 >
                   <input
                     type="radio"
@@ -114,31 +115,31 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                     value={listType.value}
                     checked={type === listType.value}
                     onChange={(e) => setType(e.target.value as ListType)}
-                    className="mt-1 mr-3"
+                    className="mt-1 mr-3 w-4 h-4"
                     disabled={createList.isPending}
                   />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{listType.icon}</span>
-                      <span className="font-medium text-gray-900">{listType.label}</span>
+                      <span className="text-lg sm:text-xl">{listType.icon}</span>
+                      <span className="font-medium text-gray-900 text-sm sm:text-base">{listType.label}</span>
                     </div>
-                    <p className="text-sm text-gray-600">{listType.description}</p>
+                    <p className="text-xs sm:text-sm text-gray-600">{listType.description}</p>
                   </div>
                 </label>
               ))}
             </div>
           </div>
 
-          <div>
-            <label className="flex items-center">
+          <div className="py-2">
+            <label className="flex items-start gap-3">
               <input
                 type="checkbox"
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
-                className="mr-2"
+                className="mt-1 w-4 h-4"
                 disabled={createList.isPending}
               />
-              <span className="text-sm text-gray-700">
+              <span className="text-sm text-gray-700 leading-relaxed">
                 Make this list private (only you can see it)
               </span>
             </label>
@@ -150,18 +151,18 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
             </div>
           )}
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              className="order-2 sm:order-1 flex-1 py-3 sm:py-2 px-4 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 text-sm sm:text-base font-medium"
               disabled={createList.isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="order-1 sm:order-2 flex-1 py-3 sm:py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base font-medium"
               disabled={createList.isPending}
             >
               {createList.isPending ? 'Creating...' : 'Create List'}
