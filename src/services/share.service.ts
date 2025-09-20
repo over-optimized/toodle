@@ -16,7 +16,7 @@ export class ShareService {
         .from('shares')
         .insert({
           list_id: listId,
-          shared_by: user.id,
+          created_by: user.id,
           shared_with_email: request.shared_with_email,
           role: request.role,
           expires_at: request.expires_at

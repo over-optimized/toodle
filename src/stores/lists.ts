@@ -17,6 +17,11 @@ interface ListsState {
   clearError: () => void
 }
 
+/**
+ * @deprecated Use React Query hooks instead:
+ * - useLists() for fetching lists
+ * - useListMutations() for list operations
+ */
 export const useListsStore = create<ListsState>((set, get) => ({
   lists: [],
   currentList: null,

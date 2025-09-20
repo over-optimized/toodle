@@ -14,6 +14,11 @@ interface ItemsState {
   clearError: () => void
 }
 
+/**
+ * @deprecated Use React Query hooks instead:
+ * - useItems() for fetching items
+ * - useItemMutations() for item operations
+ */
 export const useItemsStore = create<ItemsState>((set, get) => ({
   isLoading: false,
   error: null,

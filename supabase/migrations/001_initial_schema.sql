@@ -34,8 +34,9 @@ CREATE TABLE items (
   list_id UUID NOT NULL REFERENCES lists(id) ON DELETE CASCADE,
   content TEXT NOT NULL CHECK (length(content) > 0 AND length(content) <= 500),
   is_completed BOOLEAN NOT NULL DEFAULT false,
+  completed_at TIMESTAMP WITH TIME ZONE,
   target_date TIMESTAMP WITH TIME ZONE, -- Only for countdown lists
-  sort_order INTEGER NOT NULL,
+  position INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -64,12 +65,11 @@ CREATE TABLE item_history (
 -- Indexes for performance optimization
 CREATE INDEX idx_lists_user_id ON lists(user_id);
 CREATE INDEX idx_items_list_id ON items(list_id);
-CREATE INDEX idx_items_sort_order ON items(list_id, sort_order);
+CREATE INDEX idx_items_position ON items(list_id, position);
 CREATE INDEX idx_shares_list_id ON shares(list_id);
 CREATE INDEX idx_shares_email ON shares(shared_with_email);
 CREATE INDEX idx_shares_expires ON shares(expires_at);
 CREATE INDEX idx_item_history_list_id ON item_history(list_id);
-CREATE INDEX idx_shares_expired ON shares(expires_at) WHERE expires_at < NOW();
 
 -- Additional constraints
 ALTER TABLE item_history ADD CONSTRAINT unique_list_content
@@ -78,13 +78,8 @@ ALTER TABLE item_history ADD CONSTRAINT unique_list_content
 ALTER TABLE shares ADD CONSTRAINT valid_expiration
   CHECK (expires_at <= created_at + INTERVAL '24 hours' AND expires_at > created_at);
 
-ALTER TABLE items ADD CONSTRAINT countdown_target_date
-  CHECK (
-    (target_date IS NULL) OR
-    (target_date IS NOT NULL AND EXISTS (
-      SELECT 1 FROM lists WHERE lists.id = items.list_id AND lists.type = 'countdown'
-    ))
-  );
+-- Note: countdown_target_date constraint enforced at application level
+-- CHECK constraints cannot use subqueries in PostgreSQL
 
 -- Comments for documentation
 COMMENT ON TABLE users IS 'App-specific user data extending Supabase auth';

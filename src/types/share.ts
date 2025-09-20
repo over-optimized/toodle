@@ -3,7 +3,7 @@ export type ShareRole = 'read' | 'edit'
 export interface Share {
   id: string
   list_id: string
-  shared_by: string
+  created_by: string
   shared_with_email: string
   role: ShareRole
   expires_at: string

@@ -39,14 +39,20 @@ CREATE POLICY "Users can manage own lists" ON lists
   FOR ALL USING (user_id = auth.uid());
 
 -- Items table policies
--- Users can see items in lists they have access to
-CREATE POLICY "Users can view accessible items" ON items
+-- Users can see items in their own lists
+CREATE POLICY "Users can view items in own lists" ON items
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM lists
+      WHERE lists.id = items.list_id
+      AND lists.user_id = auth.uid()
+    )
+  );
+
+-- Users can see items in shared lists
+CREATE POLICY "Users can view items in shared lists" ON items
   FOR SELECT USING (
     list_id IN (
-      -- Own lists
-      SELECT id FROM lists WHERE user_id = auth.uid()
-      UNION
-      -- Shared lists (any role, non-expired)
       SELECT list_id FROM shares
       WHERE shared_with_email = auth.email()
       AND expires_at > NOW()
@@ -56,12 +62,38 @@ CREATE POLICY "Users can view accessible items" ON items
 -- Users can modify items in their own lists
 CREATE POLICY "Users can manage items in own lists" ON items
   FOR ALL USING (
-    list_id IN (SELECT id FROM lists WHERE user_id = auth.uid())
+    EXISTS (
+      SELECT 1 FROM lists
+      WHERE lists.id = items.list_id
+      AND lists.user_id = auth.uid()
+    )
   );
 
--- Users can modify items in edit-shared lists only
-CREATE POLICY "Users can edit items in edit-shared lists" ON items
-  FOR INSERT, UPDATE, DELETE USING (
+-- Users can insert items in edit-shared lists only
+CREATE POLICY "Users can insert items in edit-shared lists" ON items
+  FOR INSERT WITH CHECK (
+    list_id IN (
+      SELECT list_id FROM shares
+      WHERE shared_with_email = auth.email()
+      AND role = 'edit'
+      AND expires_at > NOW()
+    )
+  );
+
+-- Users can update items in edit-shared lists only
+CREATE POLICY "Users can update items in edit-shared lists" ON items
+  FOR UPDATE USING (
+    list_id IN (
+      SELECT list_id FROM shares
+      WHERE shared_with_email = auth.email()
+      AND role = 'edit'
+      AND expires_at > NOW()
+    )
+  );
+
+-- Users can delete items in edit-shared lists only
+CREATE POLICY "Users can delete items in edit-shared lists" ON items
+  FOR DELETE USING (
     list_id IN (
       SELECT list_id FROM shares
       WHERE shared_with_email = auth.email()
@@ -74,7 +106,11 @@ CREATE POLICY "Users can edit items in edit-shared lists" ON items
 -- Users can see shares for their own lists
 CREATE POLICY "Users can view shares for own lists" ON shares
   FOR SELECT USING (
-    list_id IN (SELECT id FROM lists WHERE user_id = auth.uid())
+    EXISTS (
+      SELECT 1 FROM lists
+      WHERE lists.id = shares.list_id
+      AND lists.user_id = auth.uid()
+    )
   );
 
 -- Users can see shares where they are the recipient
@@ -84,18 +120,28 @@ CREATE POLICY "Users can view shares made to them" ON shares
 -- Only list owners can create/manage shares
 CREATE POLICY "Users can manage shares for own lists" ON shares
   FOR ALL USING (
-    list_id IN (SELECT id FROM lists WHERE user_id = auth.uid())
+    EXISTS (
+      SELECT 1 FROM lists
+      WHERE lists.id = shares.list_id
+      AND lists.user_id = auth.uid()
+    )
   );
 
 -- Item history table policies
--- Users can see item history for lists they have access to
-CREATE POLICY "Users can view accessible item history" ON item_history
+-- Users can see item history for their own lists
+CREATE POLICY "Users can view item history for own lists" ON item_history
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM lists
+      WHERE lists.id = item_history.list_id
+      AND lists.user_id = auth.uid()
+    )
+  );
+
+-- Users can see item history for shared lists
+CREATE POLICY "Users can view item history for shared lists" ON item_history
   FOR SELECT USING (
     list_id IN (
-      -- Own lists
-      SELECT id FROM lists WHERE user_id = auth.uid()
-      UNION
-      -- Shared lists (any role, non-expired)
       SELECT list_id FROM shares
       WHERE shared_with_email = auth.email()
       AND expires_at > NOW()
@@ -109,5 +155,7 @@ CREATE POLICY "Users can view accessible item history" ON item_history
 -- Comments for documentation
 COMMENT ON POLICY "Users can view own lists" ON lists IS 'Users can only see lists they created';
 COMMENT ON POLICY "Users can view shared lists" ON lists IS 'Users can see lists shared with them via non-expired shares';
-COMMENT ON POLICY "Users can edit items in edit-shared lists" ON items IS 'Edit permission only for edit role shares';
+COMMENT ON POLICY "Users can insert items in edit-shared lists" ON items IS 'Edit permission only for edit role shares';
+COMMENT ON POLICY "Users can update items in edit-shared lists" ON items IS 'Edit permission only for edit role shares';
+COMMENT ON POLICY "Users can delete items in edit-shared lists" ON items IS 'Edit permission only for edit role shares';
 COMMENT ON POLICY "Users can manage shares for own lists" ON shares IS 'Only list owners can create/modify shares';

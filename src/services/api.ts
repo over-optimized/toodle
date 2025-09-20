@@ -12,6 +12,13 @@ import type {
   Database
 } from '../types'
 
+/**
+ * @deprecated Use individual service classes instead:
+ * - listService for list operations
+ * - itemService for item operations
+ * - shareService for sharing operations
+ * - authService for authentication
+ */
 export class ApiService {
   async getLists(): Promise<{ data: List[] | null; error: string | null }> {
     try {
@@ -202,7 +209,7 @@ export class ApiService {
         .from('shares')
         .insert({
           list_id: listId,
-          shared_by: user.id,
+          created_by: user.id,
           shared_with_email: request.shared_with_email,
           role: request.role,
           expires_at: request.expires_at
@@ -231,4 +238,8 @@ export class ApiService {
   }
 }
 
+/**
+ * @deprecated Use individual service instances instead:
+ * - listService, itemService, shareService, authService
+ */
 export const apiService = new ApiService()

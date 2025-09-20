@@ -1,17 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useListsStore, useAuthStore } from '../../stores'
+import { useAuthStore } from '../../stores'
+import { useLists } from '../../hooks'
 import type { ListType } from '../../types'
 import { CreateListModal } from './CreateListModal'
 
 export function ListsOverview() {
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const { lists, isLoading, error, fetchLists } = useListsStore()
+  const { data: lists = [], isLoading, error } = useLists()
   const { user, signOut } = useAuthStore()
-
-  useEffect(() => {
-    fetchLists()
-  }, [])
 
   const getListTypeIcon = (type: ListType) => {
     switch (type) {
@@ -67,7 +64,7 @@ export function ListsOverview() {
 
         {error && (
           <div className="mb-6 p-4 text-red-600 bg-red-50 border border-red-200 rounded-lg">
-            {error}
+            {error.message}
           </div>
         )}
 

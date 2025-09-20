@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useListsStore } from '../../stores'
+import { useListMutations } from '../../hooks'
 import type { ListType } from '../../types'
 
 interface CreateListModalProps {
@@ -12,38 +12,36 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<ListType>('simple')
   const [isPrivate, setIsPrivate] = useState(true)
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
-  
-  const { createList } = useListsStore()
+
+  const { createList } = useListMutations()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!title.trim()) {
       setError('Title is required')
       return
     }
 
-    setIsLoading(true)
     setError('')
 
     try {
-      const newList = await createList({
+      const result = await createList.mutateAsync({
         title: title.trim(),
         type,
         is_private: isPrivate
       })
-      
-      if (newList) {
+
+      if (result.data) {
         onClose()
-        navigate(`/lists/${newList.id}`)
+        navigate(`/lists/${result.data.id}`)
+      } else if (result.error) {
+        setError(result.error)
       }
     } catch (err) {
       setError('Failed to create list. Please try again.')
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -95,7 +93,7 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Enter list title"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
+              disabled={createList.isPending}
               required
             />
           </div>
@@ -117,7 +115,7 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                     checked={type === listType.value}
                     onChange={(e) => setType(e.target.value as ListType)}
                     className="mt-1 mr-3"
-                    disabled={isLoading}
+                    disabled={createList.isPending}
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
@@ -138,7 +136,7 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
                 checked={isPrivate}
                 onChange={(e) => setIsPrivate(e.target.checked)}
                 className="mr-2"
-                disabled={isLoading}
+                disabled={createList.isPending}
               />
               <span className="text-sm text-gray-700">
                 Make this list private (only you can see it)
@@ -157,16 +155,16 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
               type="button"
               onClick={onClose}
               className="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              disabled={isLoading}
+              disabled={createList.isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isLoading}
+              disabled={createList.isPending}
             >
-              {isLoading ? 'Creating...' : 'Create List'}
+              {createList.isPending ? 'Creating...' : 'Create List'}
             </button>
           </div>
         </form>
