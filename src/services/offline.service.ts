@@ -441,10 +441,37 @@ export class OfflineService {
     return operations.length
   }
 
+  async getQueueStatus(): Promise<{
+    pending: number
+    failed: number
+    lastSync: Date | null
+    isOnline: boolean
+    syncInProgress: boolean
+  }> {
+    const operations = await offlineDb.getPendingOperations()
+    const failedOps = operations.filter(op => op.retryCount >= 3)
+
+    return {
+      pending: operations.length,
+      failed: failedOps.length,
+      lastSync: null, // Could store this in localStorage
+      isOnline: this.isOnline,
+      syncInProgress: this.syncInProgress
+    }
+  }
+
   async clearPendingOperations(): Promise<void> {
     await offlineDb.pendingOperations.clear()
     this.retryTimeouts.forEach(timeout => clearTimeout(timeout))
     this.retryTimeouts.clear()
+  }
+
+  async forceSync(): Promise<void> {
+    if (this.isOnline) {
+      await this.syncPendingOperations()
+    } else {
+      throw new Error('Cannot sync while offline')
+    }
   }
 }
 

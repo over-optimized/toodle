@@ -1,53 +1,64 @@
 import { useState } from 'react'
-import { apiService } from '../../services/api'
-import type { ShareRole } from '../../types'
+import { useShareMutations } from '../../hooks'
+import type { List } from '../../types'
 
 interface ShareModalProps {
-  listId: string
-  listTitle: string
+  list: List
   isOpen: boolean
   onClose: () => void
 }
 
-export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalProps) {
+export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<ShareRole>('read')
-  const [isLoading, setIsLoading] = useState(false)
+  const [permission, setPermission] = useState<'read' | 'write'>('read')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [shareLink, setShareLink] = useState<string | null>(null)
+  const [copySuccess, setCopySuccess] = useState(false)
+
+  const { createShare } = useShareMutations(list.id)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!email.trim()) {
       setError('Email is required')
       return
     }
 
-    setIsLoading(true)
     setError('')
     setSuccess('')
 
     try {
       const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 24)
-      
-      const { error } = await apiService.createShare(listId, {
+      expiresAt.setDate(expiresAt.getDate() + 7) // 7 days from now
+
+      await createShare.mutateAsync({
         shared_with_email: email.trim(),
-        role,
+        permission,
         expires_at: expiresAt.toISOString()
       })
-      
-      if (error) {
-        setError(error)
-      } else {
-        setSuccess(`List shared with ${email}!`)
-        setEmail('')
-      }
-    } catch (err) {
+
+      setSuccess(`List shared with ${email}!`)
+      setEmail('')
+
+      // Generate shareable link (could be enhanced to use actual share ID)
+      const link = `${window.location.origin}/shared/${list.id}?permission=${permission}`
+      setShareLink(link)
+    } catch (error) {
       setError('Failed to share list. Please try again.')
-    } finally {
-      setIsLoading(false)
+    }
+  }
+
+  const copyToClipboard = async () => {
+    if (shareLink) {
+      try {
+        await navigator.clipboard.writeText(shareLink)
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error)
+      }
     }
   }
 
@@ -58,7 +69,7 @@ export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalPro
       <div className="bg-white rounded-lg max-w-md w-full p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-900">
-            Share "{listTitle}"
+            Share "{list.title}"
           </h2>
           <button
             onClick={onClose}
@@ -80,7 +91,7 @@ export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalPro
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter email to share with"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isLoading}
+              disabled={createShare.isPending}
               required
             />
           </div>
@@ -93,24 +104,24 @@ export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalPro
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="role"
+                  name="permission"
                   value="read"
-                  checked={role === 'read'}
-                  onChange={(e) => setRole(e.target.value as ShareRole)}
+                  checked={permission === 'read'}
+                  onChange={(e) => setPermission(e.target.value as 'read' | 'write')}
                   className="mr-2"
-                  disabled={isLoading}
+                  disabled={createShare.isPending}
                 />
                 <span className="text-sm">View only - can see items but not edit</span>
               </label>
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="role"
-                  value="edit"
-                  checked={role === 'edit'}
-                  onChange={(e) => setRole(e.target.value as ShareRole)}
+                  name="permission"
+                  value="write"
+                  checked={permission === 'write'}
+                  onChange={(e) => setPermission(e.target.value as 'read' | 'write')}
                   className="mr-2"
-                  disabled={isLoading}
+                  disabled={createShare.isPending}
                 />
                 <span className="text-sm">Edit access - can add and modify items</span>
               </label>
@@ -129,27 +140,53 @@ export function ShareModal({ listId, listTitle, isOpen, onClose }: ShareModalPro
             </div>
           )}
 
+          {shareLink && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Shareable link
+              </label>
+              <div className="flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  readOnly
+                  value={shareLink}
+                  className="flex-1 rounded-l-md border border-gray-300 px-3 py-2 text-sm bg-gray-50"
+                />
+                <button
+                  type="button"
+                  onClick={copyToClipboard}
+                  className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {copySuccess ? '✓' : '📋'}
+                </button>
+              </div>
+              {copySuccess && (
+                <p className="text-sm text-green-600">Link copied to clipboard!</p>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
               className="flex-1 py-2 px-4 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              disabled={isLoading}
+              disabled={createShare.isPending}
             >
               Close
             </button>
             <button
               type="submit"
               className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-              disabled={isLoading}
+              disabled={createShare.isPending}
             >
-              {isLoading ? 'Sharing...' : 'Share List'}
+              {createShare.isPending ? 'Sharing...' : 'Share List'}
             </button>
           </div>
         </form>
 
         <div className="mt-4 text-xs text-gray-500 text-center">
-          Share expires in 24 hours
+          Share expires in 7 days
         </div>
       </div>
     </div>
