@@ -4,7 +4,7 @@ export class BackgroundSyncManager {
   private isRegistered = false
 
   async register(): Promise<void> {
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+    if (!('serviceWorker' in navigator) || !('sync' in (window as any).ServiceWorkerRegistration.prototype)) {
       console.warn('Background sync not supported')
       return
     }
@@ -13,7 +13,7 @@ export class BackgroundSyncManager {
       const registration = await navigator.serviceWorker.ready
 
       // Register for background sync
-      await registration.sync.register('toodle-sync')
+      await (registration as any).sync.register('toodle-sync')
       this.isRegistered = true
 
       console.log('Background sync registered')
@@ -27,7 +27,7 @@ export class BackgroundSyncManager {
       await this.register()
     }
 
-    if (!('serviceWorker' in navigator) || !('sync' in window.ServiceWorkerRegistration.prototype)) {
+    if (!('serviceWorker' in navigator) || !('sync' in (window as any).ServiceWorkerRegistration.prototype)) {
       // Fallback to immediate sync if background sync not supported
       await offlineService.syncPendingOperations()
       return
@@ -35,7 +35,7 @@ export class BackgroundSyncManager {
 
     try {
       const registration = await navigator.serviceWorker.ready
-      await registration.sync.register('toodle-sync')
+      await (registration as any).sync.register('toodle-sync')
     } catch (error) {
       console.error('Failed to request background sync:', error)
       // Fallback to immediate sync
@@ -44,7 +44,7 @@ export class BackgroundSyncManager {
   }
 
   isSupported(): boolean {
-    return 'serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype
+    return 'serviceWorker' in navigator && 'sync' in (window as any).ServiceWorkerRegistration.prototype
   }
 }
 

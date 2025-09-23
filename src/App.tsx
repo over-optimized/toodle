@@ -7,6 +7,8 @@ import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores'
 import { LoginForm, AuthCallback, ProtectedRoute } from './components/auth'
 import { ListsOverview, ListView } from './components/lists'
+import { backgroundSync } from './lib/background-sync'
+import { initializeOfflineDatabase } from './lib/offline-db'
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -29,7 +31,13 @@ function App() {
   const { initialize, isAuthenticated } = useAuthStore()
 
   useEffect(() => {
-    initialize()
+    const initializeApp = async () => {
+      await initialize()
+      await initializeOfflineDatabase()
+      await backgroundSync.register()
+    }
+
+    initializeApp()
   }, [initialize])
 
   return (

@@ -2,7 +2,9 @@ import { offlineDb, type PendingOperation } from '../lib/offline-db'
 import { listService } from './list.service'
 import { itemService } from './item.service'
 import { shareService } from './share.service'
-import type { List, Item, Share, CreateListRequest, CreateItemRequest, UpdateListRequest, UpdateItemRequest, CreateShareRequest } from '../types'
+import { backgroundSync } from '../lib/background-sync'
+import { syncService } from './sync.service'
+import type { List, Item, CreateListRequest, CreateItemRequest, UpdateListRequest, UpdateItemRequest } from '../types'
 
 export class OfflineService {
   private isOnline = navigator.onLine
@@ -12,6 +14,12 @@ export class OfflineService {
   constructor() {
     this.setupOnlineStatusListeners()
     this.startPeriodicSync()
+  }
+
+  private async requestBackgroundSync(): Promise<void> {
+    if (!this.isOnline) {
+      await backgroundSync.requestSync()
+    }
   }
 
   private setupOnlineStatusListeners(): void {
@@ -62,6 +70,7 @@ export class OfflineService {
           data: request
         })
 
+        await this.requestBackgroundSync()
         return { data: tempList, error: null }
       }
     } catch (error) {
@@ -101,6 +110,7 @@ export class OfflineService {
           data: request
         })
 
+        await this.requestBackgroundSync()
         return { data: updatedList, error: null }
       }
     } catch (error) {
@@ -132,6 +142,7 @@ export class OfflineService {
           recordId: id
         })
 
+        await this.requestBackgroundSync()
         return { error: null }
       }
     } catch (error) {
@@ -159,8 +170,8 @@ export class OfflineService {
           list_id: listId,
           content: request.content,
           is_completed: false,
-          completed_at: null,
-          target_date: request.target_date || null,
+          completed_at: undefined,
+          target_date: request.target_date || undefined,
           position,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
@@ -174,6 +185,7 @@ export class OfflineService {
           data: { ...request, list_id: listId }
         })
 
+        await this.requestBackgroundSync()
         return { data: tempItem, error: null }
       }
     } catch (error) {
@@ -202,7 +214,7 @@ export class OfflineService {
         const updatedItem: Item = {
           ...existingItem,
           ...request,
-          completed_at: request.is_completed ? new Date().toISOString() : (request.is_completed === false ? null : existingItem.completed_at),
+          completed_at: request.is_completed ? new Date().toISOString() : (request.is_completed === false ? undefined : existingItem.completed_at),
           updated_at: new Date().toISOString()
         }
 
@@ -214,6 +226,7 @@ export class OfflineService {
           data: request
         })
 
+        await this.requestBackgroundSync()
         return { data: updatedItem, error: null }
       }
     } catch (error) {
@@ -240,6 +253,7 @@ export class OfflineService {
           recordId: id
         })
 
+        await this.requestBackgroundSync()
         return { error: null }
       }
     } catch (error) {
@@ -308,6 +322,14 @@ export class OfflineService {
     this.syncInProgress = true
 
     try {
+      // First, detect and resolve conflicts
+      const conflicts = await syncService.detectConflicts()
+      if (conflicts.length > 0) {
+        console.log(`Found ${conflicts.length} conflicts, resolving...`)
+        await syncService.resolveConflicts(conflicts)
+      }
+
+      // Then process pending operations
       const operations = await offlineDb.getPendingOperations()
 
       for (const operation of operations) {
