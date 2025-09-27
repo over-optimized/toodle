@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
+import { useListPerformance } from '../../hooks/useListPerformance'
+import { ValidationService } from '../../services/validation.service'
 import type { List } from '../../types'
 
 interface SimpleListProps {
   list: List
 }
 
-export function SimpleList({ list }: SimpleListProps) {
+export const SimpleList = memo(function SimpleList({ list }: SimpleListProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
@@ -19,9 +21,29 @@ export function SimpleList({ list }: SimpleListProps) {
   // Enable real-time updates
   useRealtimeList(list.id)
 
+  // Performance optimizations
+  const { sortedItems } = useListPerformance(items)
+
+  // Get usage stats for validation
+  const usageStats = ValidationService.getUsageStats([], items)
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newItemContent.trim()) return
+
+    // Validate item content
+    const contentValidation = ValidationService.validateItemContent(newItemContent)
+    if (!contentValidation.isValid) {
+      alert(ValidationService.getErrorMessage(contentValidation.errors))
+      return
+    }
+
+    // Validate item count limit
+    const itemLimitValidation = ValidationService.validateItemCreation(items)
+    if (!itemLimitValidation.isValid) {
+      alert(ValidationService.getErrorMessage(itemLimitValidation.errors))
+      return
+    }
 
     try {
       const position = Math.max(...items.map(item => item.position), 0) + 1
@@ -81,8 +103,8 @@ export function SimpleList({ list }: SimpleListProps) {
     }
   }
 
-  const pendingItems = items.filter(item => !item.is_completed)
-  const completedItems = items.filter(item => item.is_completed)
+  const pendingItems = sortedItems.pending
+  const completedItems = sortedItems.completed
 
   if (isLoading) {
     return (
@@ -273,6 +295,12 @@ export function SimpleList({ list }: SimpleListProps) {
 
       {/* Add new item form - moved to bottom */}
       <div className="pt-4 border-t border-gray-200">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-medium text-gray-700">Add New Item</span>
+          <span className="text-xs text-gray-500">
+            {usageStats.items?.current || 0} of {usageStats.items?.max || 100} items
+          </span>
+        </div>
         <form onSubmit={handleAddItem} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
@@ -281,6 +309,7 @@ export function SimpleList({ list }: SimpleListProps) {
             placeholder="Add a new item..."
             className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={createItem.isPending}
+            maxLength={500}
           />
           <button
             type="submit"
@@ -293,4 +322,4 @@ export function SimpleList({ list }: SimpleListProps) {
       </div>
     </div>
   )
-}
+})

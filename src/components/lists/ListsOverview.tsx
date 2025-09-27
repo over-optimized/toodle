@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useState, memo, Suspense, lazy } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../../stores'
 import { useLists } from '../../hooks'
+import { LoadingSpinner } from '../ui/LoadingSpinner'
 import type { ListType } from '../../types'
-import { CreateListModal } from './CreateListModal'
 
-export function ListsOverview() {
+// Lazy load the CreateListModal since it's only used when creating lists
+const CreateListModal = lazy(() => import('./CreateListModal').then(module => ({ default: module.CreateListModal })))
+
+export const ListsOverview = memo(function ListsOverview() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const { data: lists = [], isLoading, error } = useLists()
   const { user, signOut } = useAuthStore()
@@ -123,11 +126,13 @@ export function ListsOverview() {
       </div>
 
       {showCreateModal && (
-        <CreateListModal
-          isOpen={showCreateModal}
-          onClose={() => setShowCreateModal(false)}
-        />
+        <Suspense fallback={<LoadingSpinner size="sm" text="Loading create form..." />}>
+          <CreateListModal
+            isOpen={showCreateModal}
+            onClose={() => setShowCreateModal(false)}
+          />
+        </Suspense>
       )}
     </div>
   )
-}
+})

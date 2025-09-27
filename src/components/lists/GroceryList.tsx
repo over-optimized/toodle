@@ -1,22 +1,14 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
+import { useGroceryListPerformance } from '../../hooks/useListPerformance'
+import { ValidationService } from '../../services/validation.service'
 import type { List } from '../../types'
 
 interface GroceryListProps {
   list: List
 }
 
-const GROCERY_CATEGORIES = [
-  { id: 'produce', name: 'Produce', icon: '🥬', color: 'bg-green-100 text-green-800' },
-  { id: 'dairy', name: 'Dairy', icon: '🥛', color: 'bg-blue-100 text-blue-800' },
-  { id: 'meat', name: 'Meat & Seafood', icon: '🥩', color: 'bg-red-100 text-red-800' },
-  { id: 'pantry', name: 'Pantry', icon: '🥫', color: 'bg-yellow-100 text-yellow-800' },
-  { id: 'frozen', name: 'Frozen', icon: '🧊', color: 'bg-cyan-100 text-cyan-800' },
-  { id: 'bakery', name: 'Bakery', icon: '🍞', color: 'bg-orange-100 text-orange-800' },
-  { id: 'household', name: 'Household', icon: '🧽', color: 'bg-purple-100 text-purple-800' },
-  { id: 'other', name: 'Other', icon: '📦', color: 'bg-gray-100 text-gray-800' }
-]
 
 // Smart categorization based on item content
 const categorizeItem = (content: string): string => {
@@ -60,7 +52,7 @@ const categorizeItem = (content: string): string => {
   return 'other'
 }
 
-export function GroceryList({ list }: GroceryListProps) {
+export const GroceryList = memo(function GroceryList({ list }: GroceryListProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -73,9 +65,34 @@ export function GroceryList({ list }: GroceryListProps) {
   // Enable real-time updates
   useRealtimeList(list.id)
 
+  // Performance optimizations
+  const {
+    GROCERY_CATEGORIES,
+    parseItemContent,
+    itemsByCategory,
+    pendingCategories,
+    completedItems,
+    progress,
+    itemCounts
+  } = useGroceryListPerformance(items)
+
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newItemContent.trim()) return
+
+    // Validate item content
+    const contentValidation = ValidationService.validateItemContent(newItemContent)
+    if (!contentValidation.isValid) {
+      alert(ValidationService.getErrorMessage(contentValidation.errors))
+      return
+    }
+
+    // Validate item count limit
+    const itemLimitValidation = ValidationService.validateItemCreation(items)
+    if (!itemLimitValidation.isValid) {
+      alert(ValidationService.getErrorMessage(itemLimitValidation.errors))
+      return
+    }
 
     try {
       const position = Math.max(...items.map(item => item.position), 0) + 1
@@ -116,29 +133,6 @@ export function GroceryList({ list }: GroceryListProps) {
     }
   }
 
-  const parseItemContent = (content: string) => {
-    const parts = content.split('|')
-    return {
-      text: parts[0] || content,
-      category: parts[1] || 'other'
-    }
-  }
-
-  const itemsByCategory = items.reduce((acc, item) => {
-    const { category } = parseItemContent(item.content)
-    if (!acc[category]) acc[category] = []
-    acc[category].push(item)
-    return acc
-  }, {} as Record<string, typeof items>)
-
-  const pendingCategories = GROCERY_CATEGORIES.filter(category =>
-    itemsByCategory[category.id]?.some(item => !item.is_completed)
-  )
-
-  const completedItems = items.filter(item => item.is_completed)
-  const totalItems = items.length
-  const completedCount = completedItems.length
-  const progress = totalItems > 0 ? (completedCount / totalItems) * 100 : 0
 
   if (isLoading) {
     return (
@@ -159,11 +153,11 @@ export function GroceryList({ list }: GroceryListProps) {
   return (
     <div className="space-y-6">
       {/* Progress bar */}
-      {totalItems > 0 && (
+      {itemCounts.total > 0 && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium text-gray-700">Shopping Progress</span>
-            <span className="text-sm text-gray-500">{completedCount} of {totalItems} items</span>
+            <span className="text-sm text-gray-500">{itemCounts.completed} of {itemCounts.total} items</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
@@ -327,6 +321,12 @@ export function GroceryList({ list }: GroceryListProps) {
 
       {/* Add new item form - moved to bottom */}
       <div className="pt-4 border-t border-gray-200">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-medium text-gray-700">Add Grocery Item</span>
+          <span className="text-xs text-gray-500">
+            {itemCounts.total} of 100 items
+          </span>
+        </div>
         <form onSubmit={handleAddItem} className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -336,6 +336,7 @@ export function GroceryList({ list }: GroceryListProps) {
               placeholder="Add groceries (e.g., 'Milk', 'Bananas', 'Chicken')..."
               className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={createItem.isPending}
+              maxLength={500}
             />
             <button
               type="submit"
@@ -368,4 +369,4 @@ export function GroceryList({ list }: GroceryListProps) {
       </div>
     </div>
   )
-}
+})

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useListMutations } from '../../hooks'
+import { useListMutations, useLists } from '../../hooks'
+import { ValidationService } from '../../services/validation.service'
 import type { ListType } from '../../types'
 
 interface CreateListModalProps {
@@ -8,24 +9,36 @@ interface CreateListModalProps {
   onClose: () => void
 }
 
-export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
+export const CreateListModal = memo(function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<ListType>('simple')
   const [isPrivate, setIsPrivate] = useState(true)
   const [error, setError] = useState('')
 
   const { createList } = useListMutations()
+  const { data: existingLists = [] } = useLists()
   const navigate = useNavigate()
+
+  // Get usage stats for display
+  const usageStats = ValidationService.getUsageStats(existingLists)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError('')
 
-    if (!title.trim()) {
-      setError('Title is required')
+    // Validate title
+    const titleValidation = ValidationService.validateListTitle(title)
+    if (!titleValidation.isValid) {
+      setError(ValidationService.getErrorMessage(titleValidation.errors))
       return
     }
 
-    setError('')
+    // Validate list count limit
+    const listLimitValidation = ValidationService.validateListCreation(existingLists)
+    if (!listLimitValidation.isValid) {
+      setError(ValidationService.getErrorMessage(listLimitValidation.errors))
+      return
+    }
 
     try {
       const result = await createList.mutateAsync({
@@ -72,7 +85,12 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center p-0 sm:p-4 z-50">
       <div className="bg-white rounded-t-lg sm:rounded-lg max-w-md w-full p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Create New List</h2>
+          <div>
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Create New List</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              {usageStats.lists.current} of {usageStats.lists.max} lists used
+            </p>
+          </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 p-2 -m-2"
@@ -172,4 +190,4 @@ export function CreateListModal({ isOpen, onClose }: CreateListModalProps) {
       </div>
     </div>
   )
-}
+})

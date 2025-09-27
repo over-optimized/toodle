@@ -4,10 +4,13 @@ import { useRealtimeListsOverview } from '../../hooks/useRealtimeList'
 import { SimpleList } from './SimpleList'
 import { GroceryList } from './GroceryList'
 import { CountdownList } from './CountdownList'
-import { ShareModal } from '../sharing/ShareModal'
-import { useState } from 'react'
+import { LoadingSpinner } from '../ui/LoadingSpinner'
+import { useState, memo, Suspense, lazy } from 'react'
 
-export function ListView() {
+// Lazy load the ShareModal since it's only used when sharing
+const ShareModal = lazy(() => import('../sharing/ShareModal').then(module => ({ default: module.ShareModal })))
+
+export const ListView = memo(function ListView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [showShareModal, setShowShareModal] = useState(false)
@@ -188,12 +191,14 @@ export function ListView() {
 
         {/* Share Modal */}
         {showShareModal && (
-          <ShareModal
-            listId={list.id}
-            listTitle={list.title}
-            isOpen={showShareModal}
-            onClose={() => setShowShareModal(false)}
-          />
+          <Suspense fallback={<LoadingSpinner size="sm" text="Loading share options..." />}>
+            <ShareModal
+              listId={list.id}
+              listTitle={list.title}
+              isOpen={showShareModal}
+              onClose={() => setShowShareModal(false)}
+            />
+          </Suspense>
         )}
 
         {/* Delete Confirmation Modal */}
@@ -229,4 +234,4 @@ export function ListView() {
       </div>
     </div>
   )
-}
+})

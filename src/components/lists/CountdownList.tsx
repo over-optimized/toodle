@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, memo } from 'react'
 import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
+import { useCountdownPerformance } from '../../hooks/useListPerformance'
+import { ValidationService } from '../../services/validation.service'
 import type { List } from '../../types'
 
 interface CountdownListProps {
@@ -14,36 +16,8 @@ interface TimeRemaining {
   seconds: number
 }
 
-const formatTimeRemaining = (targetDate: string): TimeRemaining & { isExpired: boolean } => {
-  const now = new Date().getTime()
-  const target = new Date(targetDate).getTime()
-  const difference = target - now
 
-  if (difference <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true }
-  }
-
-  const days = Math.floor(difference / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60))
-  const seconds = Math.floor((difference % (1000 * 60)) / 1000)
-
-  return { days, hours, minutes, seconds, isExpired: false }
-}
-
-const getUrgencyColor = (targetDate: string): string => {
-  const now = new Date().getTime()
-  const target = new Date(targetDate).getTime()
-  const hoursRemaining = (target - now) / (1000 * 60 * 60)
-
-  if (hoursRemaining <= 0) return 'text-red-600 bg-red-50 border-red-200' // Expired
-  if (hoursRemaining <= 24) return 'text-red-600 bg-red-50 border-red-200' // Critical (< 1 day)
-  if (hoursRemaining <= 72) return 'text-orange-600 bg-orange-50 border-orange-200' // Warning (< 3 days)
-  if (hoursRemaining <= 168) return 'text-yellow-600 bg-yellow-50 border-yellow-200' // Attention (< 1 week)
-  return 'text-green-600 bg-green-50 border-green-200' // Safe
-}
-
-export function CountdownList({ list }: CountdownListProps) {
+export const CountdownList = memo(function CountdownList({ list }: CountdownListProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [newItemTargetDate, setNewItemTargetDate] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -58,6 +32,14 @@ export function CountdownList({ list }: CountdownListProps) {
   // Enable real-time updates
   useRealtimeList(list.id)
 
+  // Performance optimizations
+  const {
+    formatTimeRemaining,
+    getUrgencyColor,
+    sortedItems,
+    minDateTime
+  } = useCountdownPerformance(items)
+
   // Update current time every second for live countdown
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,15 +53,30 @@ export function CountdownList({ list }: CountdownListProps) {
     e.preventDefault()
     if (!newItemContent.trim() || !newItemTargetDate) return
 
-    // Validate that target date is in the future
-    const targetDate = new Date(newItemTargetDate)
-    if (targetDate <= new Date()) {
-      alert('Target date must be in the future')
+    // Validate item content
+    const contentValidation = ValidationService.validateItemContent(newItemContent)
+    if (!contentValidation.isValid) {
+      alert(ValidationService.getErrorMessage(contentValidation.errors))
+      return
+    }
+
+    // Validate target date
+    const dateValidation = ValidationService.validateTargetDate(newItemTargetDate)
+    if (!dateValidation.isValid) {
+      alert(ValidationService.getErrorMessage(dateValidation.errors))
+      return
+    }
+
+    // Validate item count limit
+    const itemLimitValidation = ValidationService.validateItemCreation(items)
+    if (!itemLimitValidation.isValid) {
+      alert(ValidationService.getErrorMessage(itemLimitValidation.errors))
       return
     }
 
     try {
       const position = Math.max(...items.map(item => item.position), 0) + 1
+      const targetDate = new Date(newItemTargetDate)
 
       await createItem.mutateAsync({
         content: newItemContent.trim(),
@@ -153,18 +150,8 @@ export function CountdownList({ list }: CountdownListProps) {
     }
   }
 
-  // Sort items by target date (earliest first)
-  const sortedItems = [...items].sort((a, b) => {
-    if (!a.target_date) return 1
-    if (!b.target_date) return -1
-    return new Date(a.target_date).getTime() - new Date(b.target_date).getTime()
-  })
-
-  const pendingItems = sortedItems.filter(item => !item.is_completed)
-  const completedItems = sortedItems.filter(item => item.is_completed)
-
-  // Get the minimum date for new items (now + 1 minute)
-  const minDateTime = new Date(Date.now() + 60000).toISOString().slice(0, 16)
+  const pendingItems = sortedItems.pending
+  const completedItems = sortedItems.completed
 
   if (isLoading) {
     return (
@@ -407,6 +394,12 @@ export function CountdownList({ list }: CountdownListProps) {
 
       {/* Add new item form - moved to bottom */}
       <div className="pt-4 border-t border-gray-200">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-medium text-gray-700">Add Deadline Item</span>
+          <span className="text-xs text-gray-500">
+            {pendingItems.length + completedItems.length} of 100 items
+          </span>
+        </div>
         <form onSubmit={handleAddItem} className="space-y-3">
           <div className="flex flex-col sm:flex-row gap-2">
             <input
@@ -416,6 +409,7 @@ export function CountdownList({ list }: CountdownListProps) {
               placeholder="Add a deadline item (e.g., 'Submit project proposal')..."
               className="flex-1 px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={createItem.isPending}
+              maxLength={500}
             />
             <div className="flex gap-2">
               <input
@@ -443,4 +437,4 @@ export function CountdownList({ list }: CountdownListProps) {
       </div>
     </div>
   )
-}
+})

@@ -1,14 +1,20 @@
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { ErrorBoundary } from 'react-error-boundary'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores'
-import { LoginForm, AuthCallback, ProtectedRoute } from './components/auth'
-import { ListsOverview, ListView } from './components/lists'
+import { ProtectedRoute } from './components/auth'
+import { LoadingSpinner } from './components/ui/LoadingSpinner'
 import { backgroundSync } from './lib/background-sync'
 import { initializeOfflineDatabase } from './lib/offline-db'
+
+// Lazy-loaded page components
+const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })))
+const ListViewPage = lazy(() => import('./pages/ListViewPage').then(module => ({ default: module.ListViewPage })))
+const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })))
+const AuthCallbackPage = lazy(() => import('./pages/AuthCallbackPage').then(module => ({ default: module.AuthCallbackPage })))
 
 function ErrorFallback({ error }: { error: Error }) {
   return (
@@ -45,38 +51,40 @@ function App() {
       <ErrorBoundary FallbackComponent={ErrorFallback}>
         <Router>
           <div className="min-h-screen bg-gray-50">
-            <Routes>
-              <Route
-                path="/login"
-                element={
-                  isAuthenticated ? <Navigate to="/" replace /> : <LoginForm />
-                }
-              />
-              <Route
-                path="/auth/callback"
-                element={<AuthCallback />}
-              />
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <ListsOverview />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/lists/:id"
-                element={
-                  <ProtectedRoute>
-                    <ListView />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="*"
-                element={<Navigate to="/" replace />}
-              />
-            </Routes>
+            <Suspense fallback={<LoadingSpinner text="Loading page..." />}>
+              <Routes>
+                <Route
+                  path="/login"
+                  element={
+                    isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />
+                  }
+                />
+                <Route
+                  path="/auth/callback"
+                  element={<AuthCallbackPage />}
+                />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/lists/:id"
+                  element={
+                    <ProtectedRoute>
+                      <ListViewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="*"
+                  element={<Navigate to="/" replace />}
+                />
+              </Routes>
+            </Suspense>
           </div>
         </Router>
       </ErrorBoundary>

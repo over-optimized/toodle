@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:analyze": "tsc && vite build --mode analyze",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "ci": "pnpm lint && pnpm test:coverage && pnpm build",
+    "analyze": "node scripts/analyze-bundle.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -47,6 +50,7 @@
     "eslint": "^8.57.1",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "rollup-plugin-visualizer": "^5.12.0",
     "typescript": "^5.9.2",
     "vite": "^5.4.20"
   }
