@@ -59,6 +59,10 @@ export class ItemService {
 
   async deleteItem(id: string): Promise<{ error: string | null }> {
     try {
+      // First, remove this item from any linked_items arrays
+      await this.removeFromAllLinkedItems(id)
+
+      // Then delete the item
       const { error } = await supabase
         .from('items')
         .delete()
@@ -126,6 +130,27 @@ export class ItemService {
       .limit(1)
 
     return ((data as any)?.[0]?.position || 0) + 1
+  }
+
+  private async removeFromAllLinkedItems(itemId: string): Promise<void> {
+    // Find all items that link to this item
+    const { data: linkingItems } = await supabase
+      .from('items')
+      .select('id, linked_items')
+      .contains('linked_items', [itemId])
+
+    if (linkingItems && linkingItems.length > 0) {
+      // Update each item to remove the deleted item from its links
+      const updates = linkingItems.map(async (item) => {
+        const newLinks = (item.linked_items || []).filter(linkId => linkId !== itemId)
+        return supabase
+          .from('items')
+          .update({ linked_items: newLinks })
+          .eq('id', item.id)
+      })
+
+      await Promise.all(updates)
+    }
   }
 }
 

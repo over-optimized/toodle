@@ -3,6 +3,25 @@ import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
 import { useGroceryListPerformance } from '../../hooks/useListPerformance'
 import { ValidationService } from '../../services/validation.service'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import type { List } from '../../types'
 
 interface GroceryListProps {
@@ -11,6 +30,146 @@ interface GroceryListProps {
 
 
 // Smart categorization based on item content
+// Sortable item component
+interface SortableGroceryItemProps {
+  item: any
+  parseItemContent: (content: string) => { text: string; category: string }
+  onToggleComplete: (itemId: string, isCompleted: boolean) => void
+  onDelete: (itemId: string) => void
+  isUpdating: boolean
+}
+
+const SortableGroceryItem = memo(({ item, parseItemContent, onToggleComplete, onDelete, isUpdating }: SortableGroceryItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const { text } = parseItemContent(item.content)
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/>
+        </svg>
+      </div>
+
+      <button
+        onClick={() => onToggleComplete(item.id, item.is_completed)}
+        disabled={isUpdating}
+        className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center"
+        aria-label="Mark as complete"
+      >
+        {item.is_completed && (
+          <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        )}
+      </button>
+
+      <span className="flex-1 text-gray-900">{text}</span>
+
+      <button
+        onClick={() => onDelete(item.id)}
+        disabled={isUpdating}
+        className="text-red-600 hover:text-red-800 focus:outline-none disabled:opacity-50"
+        aria-label="Delete item"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+    </div>
+  )
+})
+
+SortableGroceryItem.displayName = 'SortableGroceryItem'
+
+// Sortable completed item component
+const SortableCompletedItem = memo(({ item, parseItemContent, onToggleComplete, onDelete, isUpdating }: SortableGroceryItemProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  const { text } = parseItemContent(item.content)
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-2"
+    >
+      {/* Drag handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/>
+        </svg>
+      </div>
+
+      <button
+        onClick={() => onToggleComplete(item.id, item.is_completed)}
+        disabled={isUpdating}
+        className="w-5 h-5 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
+        aria-label="Mark as incomplete"
+      >
+        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+        </svg>
+      </button>
+
+      <span className="flex-1 text-gray-600 line-through">{text}</span>
+
+      <button
+        onClick={() => onDelete(item.id)}
+        disabled={isUpdating}
+        className="text-red-600 hover:text-red-800 focus:outline-none disabled:opacity-50"
+        aria-label="Delete item"
+      >
+        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        </svg>
+      </button>
+    </div>
+  )
+})
+
+SortableCompletedItem.displayName = 'SortableCompletedItem'
+
 const categorizeItem = (content: string): string => {
   const lowercaseContent = content.toLowerCase()
 
@@ -55,11 +214,9 @@ const categorizeItem = (content: string): string => {
 export const GroceryList = memo(function GroceryList({ list }: GroceryListProps) {
   const [newItemContent, setNewItemContent] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editContent, setEditContent] = useState('')
 
   const { data: items = [], isLoading, error } = useItems(list.id)
-  const { createItem, updateItem, deleteItem } = useItemMutations(list.id)
+  const { createItem, updateItem, deleteItem, reorderItems } = useItemMutations(list.id)
   const { otherUsers, onlineCount } = usePresence(list.id)
 
   // Enable real-time updates
@@ -75,6 +232,36 @@ export const GroceryList = memo(function GroceryList({ list }: GroceryListProps)
     progress,
     itemCounts
   } = useGroceryListPerformance(items)
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over) return
+
+    if (active.id !== over.id) {
+      const activeIndex = items.findIndex((item) => item.id === active.id)
+      const overIndex = items.findIndex((item) => item.id === over.id)
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        const reorderedItems = arrayMove(items, activeIndex, overIndex)
+        const reorderedItemIds = reorderedItems.map(item => item.id)
+
+        try {
+          await reorderItems.mutateAsync(reorderedItemIds)
+        } catch (error) {
+          console.error('Failed to reorder items:', error)
+        }
+      }
+    }
+  }
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -151,7 +338,12 @@ export const GroceryList = memo(function GroceryList({ list }: GroceryListProps)
   }
 
   return (
-    <div className="space-y-6">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-6">
       {/* Progress bar */}
       {itemCounts.total > 0 && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
@@ -215,41 +407,18 @@ export const GroceryList = memo(function GroceryList({ list }: GroceryListProps)
               </h3>
             </div>
             <div className="p-4 space-y-2">
-              {categoryItems.map(item => {
-                const { text } = parseItemContent(item.content)
-                return (
-                  <div
+              <SortableContext items={categoryItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+                {categoryItems.map(item => (
+                  <SortableGroceryItem
                     key={item.id}
-                    className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:shadow-sm transition-shadow"
-                  >
-                    <button
-                      onClick={() => handleToggleComplete(item.id, item.is_completed)}
-                      disabled={updateItem.isPending}
-                      className="w-5 h-5 border-2 border-gray-300 rounded-full hover:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 flex items-center justify-center"
-                      aria-label="Mark as complete"
-                    >
-                      {item.is_completed && (
-                        <svg className="w-3 h-3 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-
-                    <span className="flex-1 text-gray-900">{text}</span>
-
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      disabled={deleteItem.isPending}
-                      className="text-red-600 hover:text-red-800 focus:outline-none disabled:opacity-50"
-                      aria-label="Delete item"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                )
-              })}
+                    item={item}
+                    parseItemContent={parseItemContent}
+                    onToggleComplete={handleToggleComplete}
+                    onDelete={handleDeleteItem}
+                    isUpdating={updateItem.isPending || deleteItem.isPending}
+                  />
+                ))}
+              </SortableContext>
             </div>
           </div>
         )
@@ -268,39 +437,18 @@ export const GroceryList = memo(function GroceryList({ list }: GroceryListProps)
             </h3>
           </div>
           <div className="p-4 space-y-2">
-            {completedItems.map(item => {
-              const { text } = parseItemContent(item.content)
-              return (
-                <div
+            <SortableContext items={completedItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+              {completedItems.map(item => (
+                <SortableCompletedItem
                   key={item.id}
-                  className="flex items-center gap-3 p-2"
-                >
-                  <button
-                    onClick={() => handleToggleComplete(item.id, item.is_completed)}
-                    disabled={updateItem.isPending}
-                    className="w-5 h-5 bg-green-500 border-2 border-green-500 rounded-full flex items-center justify-center hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-                    aria-label="Mark as incomplete"
-                  >
-                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-
-                  <span className="flex-1 text-gray-600 line-through">{text}</span>
-
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    disabled={deleteItem.isPending}
-                    className="text-red-600 hover:text-red-800 focus:outline-none disabled:opacity-50"
-                    aria-label="Delete item"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              )
-            })}
+                  item={item}
+                  parseItemContent={parseItemContent}
+                  onToggleComplete={handleToggleComplete}
+                  onDelete={handleDeleteItem}
+                  isUpdating={updateItem.isPending || deleteItem.isPending}
+                />
+              ))}
+            </SortableContext>
           </div>
         </div>
       )}
@@ -368,5 +516,6 @@ export const GroceryList = memo(function GroceryList({ list }: GroceryListProps)
         </form>
       </div>
     </div>
+    </DndContext>
   )
 })

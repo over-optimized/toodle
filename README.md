@@ -5,16 +5,18 @@ A mobile-first Progressive Web App for managing three types of lists: simple to-
 ## 🚀 Features
 
 ### Core List Types
-- **📝 Simple Lists**: Basic task management with completion tracking
-- **🛒 Grocery Lists**: Smart categorization and shopping progress tracking
-- **⏰ Countdown Lists**: Deadline tracking with real-time countdown timers
+- **📝 Simple Lists**: Basic task management with completion tracking and drag-to-sort
+- **🛒 Grocery Lists**: Smart categorization, shopping progress tracking, and drag-to-sort
+- **⏰ Countdown Lists**: Deadline tracking with real-time countdown timers and drag-to-sort
 
 ### Advanced Features
 - **🔄 Real-time Collaboration**: Live updates and presence detection
 - **📱 Offline-First**: Works without internet, syncs when reconnected
 - **🔗 Private Sharing**: Share lists with magic links and permission controls
+- **🔗 Cross-List Linking**: Link related items across different lists (Phase 3 - Coming Soon)
 - **🎯 Smart Limits**: 10 lists per user, 100 items per list (per spec)
 - **⚡ Performance Optimized**: Code splitting, memoization, and bundle analysis
+- **🎯 Drag-to-Sort**: Intuitive reordering within completion status boundaries
 
 ## 🛠 Tech Stack
 
@@ -22,6 +24,7 @@ A mobile-first Progressive Web App for managing three types of lists: simple to-
 - **Backend**: Supabase (PostgreSQL + Auth + Realtime)
 - **Styling**: Tailwind CSS 4.x
 - **State Management**: Zustand + TanStack Query
+- **Drag & Drop**: @dnd-kit for accessibility-first interactions
 - **PWA**: Vite PWA Plugin + Workbox
 - **Offline**: IndexedDB with Dexie
 - **Testing**: Vitest + React Testing Library + Playwright

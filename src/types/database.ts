@@ -38,7 +38,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_items_linking_to: {
+        Args: { target_item_id: string }
+        Returns: {
+          id: string
+          list_id: string
+          content: string
+          list_title: string
+          list_type: ListType
+        }[]
+      }
+      get_linked_items_info: {
+        Args: { source_item_id: string }
+        Returns: {
+          id: string
+          list_id: string
+          content: string
+          is_completed: boolean
+          list_title: string
+          list_type: ListType
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

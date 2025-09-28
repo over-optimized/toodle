@@ -1,2 +1,7 @@
 export { ItemList } from './ItemList'
-export { AddItemForm } from './AddItemForm'
+export { ItemLinker } from './ItemLinker'
+export { LinkedItemsDisplay } from './LinkedItemsDisplay'
+export { LinkIndicator } from './LinkIndicator'
+export { QuickLinkAdd } from './QuickLinkAdd'
+export { BulkLinker } from './BulkLinker'
+export { LinkSuggestions } from './LinkSuggestions'

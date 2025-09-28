@@ -1,20 +1,30 @@
-import { useState, useEffect, memo } from 'react'
+import { useState, memo } from 'react'
 import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
 import { useCountdownPerformance } from '../../hooks/useListPerformance'
 import { ValidationService } from '../../services/validation.service'
 import type { List } from '../../types'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
+} from '@dnd-kit/sortable'
 
 interface CountdownListProps {
   list: List
 }
 
-interface TimeRemaining {
-  days: number
-  hours: number
-  minutes: number
-  seconds: number
-}
+
 
 
 export const CountdownList = memo(function CountdownList({ list }: CountdownListProps) {
@@ -23,10 +33,9 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editTargetDate, setEditTargetDate] = useState('')
-  const [currentTime, setCurrentTime] = useState(new Date())
 
   const { data: items = [], isLoading, error } = useItems(list.id)
-  const { createItem, updateItem, deleteItem } = useItemMutations(list.id)
+  const { createItem, updateItem, deleteItem, reorderItems } = useItemMutations(list.id)
   const { otherUsers, onlineCount } = usePresence(list.id)
 
   // Enable real-time updates
@@ -40,14 +49,6 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
     minDateTime
   } = useCountdownPerformance(items)
 
-  // Update current time every second for live countdown
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [])
 
   const handleAddItem = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -153,6 +154,47 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
   const pendingItems = sortedItems.pending
   const completedItems = sortedItems.completed
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) return
+
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    // Determine which section the items are in
+    const activeItem = items.find(item => item.id === activeId)
+    const overItem = items.find(item => item.id === overId)
+
+    if (!activeItem || !overItem) return
+
+    // Only allow reordering within the same completion status
+    if (activeItem.is_completed !== overItem.is_completed) return
+
+    const relevantItems = activeItem.is_completed ? completedItems : pendingItems
+    const oldIndex = relevantItems.findIndex(item => item.id === activeId)
+    const newIndex = relevantItems.findIndex(item => item.id === overId)
+
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const reorderedItems = arrayMove(relevantItems, oldIndex, newIndex)
+    const reorderedIds = reorderedItems.map(item => item.id)
+
+    try {
+      await reorderItems.mutateAsync(reorderedIds)
+    } catch (error) {
+      console.error('Failed to reorder items:', error)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -170,7 +212,12 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
   }
 
   return (
-    <div className="space-y-6">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-6">
       {/* Collaboration indicator */}
       {onlineCount > 1 && (
         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -207,8 +254,9 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
           <h3 className="text-lg font-medium text-gray-900">
             Active Deadlines ({pendingItems.length})
           </h3>
-          <div className="space-y-3">
-            {pendingItems.map(item => {
+          <SortableContext items={pendingItems.map(item => item.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {pendingItems.map(item => {
               if (!item.target_date) return null
 
               const timeRemaining = formatTimeRemaining(item.target_date)
@@ -320,8 +368,9 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                   </div>
                 </div>
               )
-            })}
-          </div>
+              })}
+            </div>
+          </SortableContext>
         </div>
       )}
 
@@ -436,5 +485,6 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
         </form>
       </div>
     </div>
+    </DndContext>
   )
 })

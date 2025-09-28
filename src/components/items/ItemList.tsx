@@ -1,19 +1,33 @@
 import { useState } from 'react'
-import { useItemsStore } from '../../stores'
+import { useItemMutations } from '../../hooks'
 import type { Item, ListType } from '../../types'
 import { formatDistanceToNow, isAfter, parseISO } from 'date-fns'
+import { LinkIndicator } from './LinkIndicator'
+import { LinkedItemsDisplay } from './LinkedItemsDisplay'
+import { ItemLinker } from './ItemLinker'
+import { QuickLinkAdd } from './QuickLinkAdd'
+import { BulkLinker } from './BulkLinker'
+import { LinkSuggestions } from './LinkSuggestions'
 
 interface ItemListProps {
   items: Item[]
+  listId: string
   listType: ListType
+  enableBulkOperations?: boolean
 }
 
-export function ItemList({ items, listType }: ItemListProps) {
+export function ItemList({ items, listId, listType, enableBulkOperations = false }: ItemListProps) {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editTargetDate, setEditTargetDate] = useState('')
-  
-  const { toggleItemCompletion, updateItem, deleteItem, isLoading } = useItemsStore()
+  const [showLinksFor, setShowLinksFor] = useState<string | null>(null)
+  const [linkingItemId, setLinkingItemId] = useState<string | null>(null)
+  const [quickLinkItemId, setQuickLinkItemId] = useState<string | null>(null)
+  const [suggestionsItemId, setSuggestionsItemId] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [showBulkLinker, setShowBulkLinker] = useState(false)
+
+  const { updateItem, deleteItem } = useItemMutations(listId)
 
   const handleEdit = (item: Item) => {
     setEditingId(item.id)
@@ -23,15 +37,22 @@ export function ItemList({ items, listType }: ItemListProps) {
 
   const handleSaveEdit = async (id: string) => {
     if (!editContent.trim()) return
-    
-    await updateItem(id, {
-      content: editContent.trim(),
-      target_date: editTargetDate || undefined
-    })
-    
-    setEditingId(null)
-    setEditContent('')
-    setEditTargetDate('')
+
+    try {
+      await updateItem.mutateAsync({
+        id: id,
+        request: {
+          content: editContent.trim(),
+          target_date: editTargetDate || undefined
+        }
+      })
+
+      setEditingId(null)
+      setEditContent('')
+      setEditTargetDate('')
+    } catch (error) {
+      console.error('Failed to update item:', error)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -41,12 +62,72 @@ export function ItemList({ items, listType }: ItemListProps) {
   }
 
   const handleToggleComplete = async (id: string) => {
-    await toggleItemCompletion(id)
+    const item = items.find(item => item.id === id)
+    if (!item) return
+
+    try {
+      await updateItem.mutateAsync({
+        id: id,
+        request: { is_completed: !item.is_completed }
+      })
+    } catch (error) {
+      console.error('Failed to toggle item completion:', error)
+    }
   }
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
-      await deleteItem(id)
+      try {
+        await deleteItem.mutateAsync(id)
+      } catch (error) {
+        console.error('Failed to delete item:', error)
+      }
+    }
+  }
+
+  const handleToggleLinks = (itemId: string) => {
+    setShowLinksFor(showLinksFor === itemId ? null : itemId)
+  }
+
+  const handleOpenLinker = (itemId: string) => {
+    setLinkingItemId(itemId)
+  }
+
+  const handleOpenQuickLink = (itemId: string) => {
+    setQuickLinkItemId(itemId)
+  }
+
+  const handleLinksUpdated = () => {
+    // Trigger re-render of link indicators and displays
+    setShowLinksFor(null)
+    setLinkingItemId(null)
+    setQuickLinkItemId(null)
+    setSuggestionsItemId(null)
+  }
+
+  const handleOpenSuggestions = (itemId: string) => {
+    setSuggestionsItemId(itemId)
+  }
+
+  const handleItemSelect = (itemId: string) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(items.map(item => item.id))
+    }
+  }
+
+  const handleBulkOperation = () => {
+    if (selectedItems.length > 0) {
+      setShowBulkLinker(true)
     }
   }
 
@@ -74,6 +155,34 @@ export function ItemList({ items, listType }: ItemListProps) {
 
   return (
     <div className="space-y-3">
+      {enableBulkOperations && items.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selectedItems.length === items.length && items.length > 0}
+                  onChange={handleSelectAll}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Select All ({selectedItems.length}/{items.length})
+                </span>
+              </label>
+            </div>
+            {selectedItems.length > 0 && (
+              <button
+                onClick={handleBulkOperation}
+                className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              >
+                Bulk Link ({selectedItems.length} items)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {sortedItems.map((item) => (
         <div
           key={item.id}
@@ -103,7 +212,7 @@ export function ItemList({ items, listType }: ItemListProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => handleSaveEdit(item.id)}
-                  disabled={isLoading || !editContent.trim()}
+                  disabled={updateItem.isPending || !editContent.trim()}
                   className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
                 >
                   Save
@@ -118,9 +227,17 @@ export function ItemList({ items, listType }: ItemListProps) {
             </div>
           ) : (
             <div className="flex items-start gap-3">
+              {enableBulkOperations && (
+                <input
+                  type="checkbox"
+                  checked={selectedItems.includes(item.id)}
+                  onChange={() => handleItemSelect(item.id)}
+                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              )}
               <button
                 onClick={() => handleToggleComplete(item.id)}
-                disabled={isLoading}
+                disabled={updateItem.isPending}
                 className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
                   item.is_completed
                     ? 'bg-green-500 border-green-500 text-white'
@@ -135,12 +252,15 @@ export function ItemList({ items, listType }: ItemListProps) {
               </button>
               
               <div className="flex-1 min-w-0">
-                <p className={`text-gray-900 ${
-                  item.is_completed ? 'line-through text-gray-500' : ''
-                }`}>
-                  {item.content}
-                </p>
-                
+                <div className="flex items-center gap-2">
+                  <p className={`text-gray-900 ${
+                    item.is_completed ? 'line-through text-gray-500' : ''
+                  }`}>
+                    {item.content}
+                  </p>
+                  <LinkIndicator itemId={item.id} />
+                </div>
+
                 {item.target_date && (
                   <p className={`text-sm mt-1 ${
                     isOverdue(item.target_date) && !item.is_completed
@@ -150,15 +270,52 @@ export function ItemList({ items, listType }: ItemListProps) {
                     {formatTargetDate(item.target_date)}
                   </p>
                 )}
-                
+
                 {item.completed_at && (
                   <p className="text-sm text-gray-500 mt-1">
                     Completed {formatDistanceToNow(parseISO(item.completed_at))} ago
                   </p>
                 )}
+
+                {showLinksFor === item.id && (
+                  <LinkedItemsDisplay
+                    itemId={item.id}
+                    onLinkRemoved={handleLinksUpdated}
+                  />
+                )}
               </div>
               
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleToggleLinks(item.id)}
+                  className={`p-1 hover:text-blue-600 ${
+                    showLinksFor === item.id ? 'text-blue-600' : 'text-gray-400'
+                  }`}
+                  title="View links"
+                >
+                  🔗
+                </button>
+                <button
+                  onClick={() => handleOpenQuickLink(item.id)}
+                  className="p-1 text-gray-400 hover:text-green-600"
+                  title="Quick add link"
+                >
+                  ➕
+                </button>
+                <button
+                  onClick={() => handleOpenLinker(item.id)}
+                  className="p-1 text-gray-400 hover:text-purple-600"
+                  title="Manage links"
+                >
+                  ⚙️
+                </button>
+                <button
+                  onClick={() => handleOpenSuggestions(item.id)}
+                  className="p-1 text-gray-400 hover:text-yellow-600"
+                  title="AI link suggestions"
+                >
+                  🤖
+                </button>
                 <button
                   onClick={() => handleEdit(item)}
                   className="p-1 text-gray-400 hover:text-blue-600"
@@ -178,6 +335,43 @@ export function ItemList({ items, listType }: ItemListProps) {
           )}
         </div>
       ))}
+
+      {/* Linking Modals */}
+      {linkingItemId && (
+        <ItemLinker
+          sourceItem={items.find(item => item.id === linkingItemId)!}
+          onLinksUpdated={handleLinksUpdated}
+          onClose={() => setLinkingItemId(null)}
+        />
+      )}
+
+      {quickLinkItemId && (
+        <QuickLinkAdd
+          sourceItemId={quickLinkItemId}
+          onLinkAdded={handleLinksUpdated}
+          onClose={() => setQuickLinkItemId(null)}
+        />
+      )}
+
+      {suggestionsItemId && (
+        <LinkSuggestions
+          sourceItem={items.find(item => item.id === suggestionsItemId)!}
+          onSuggestionApplied={handleLinksUpdated}
+          onClose={() => setSuggestionsItemId(null)}
+        />
+      )}
+
+      {showBulkLinker && selectedItems.length > 0 && (
+        <BulkLinker
+          selectedItems={items.filter(item => selectedItems.includes(item.id))}
+          onOperationComplete={() => {
+            handleLinksUpdated()
+            setSelectedItems([])
+            setShowBulkLinker(false)
+          }}
+          onClose={() => setShowBulkLinker(false)}
+        />
+      )}
     </div>
   )
 }
