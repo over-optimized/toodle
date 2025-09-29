@@ -4,7 +4,7 @@ import { useRealtimeList, usePresence } from '../../hooks'
 import { useGroceryListPerformance } from '../../hooks/useListPerformance'
 import { ValidationService } from '../../services/validation.service'
 import { LinkIndicator, LinkedItemsDisplay, ItemLinker, QuickLinkAdd, LinkSuggestions, BulkLinker } from '../items'
-import { ActionMenu, type ActionMenuItem } from '../ui'
+import { ActionMenu } from '../ui'
 import {
   DndContext,
   closestCenter,
