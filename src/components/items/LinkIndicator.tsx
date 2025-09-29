@@ -6,9 +6,10 @@ interface LinkIndicatorProps {
   itemId: string
   showDetails?: boolean
   className?: string
+  onClick?: () => void
 }
 
-export function LinkIndicator({ itemId, showDetails = false, className = '' }: LinkIndicatorProps) {
+export function LinkIndicator({ itemId, showDetails = false, className = '', onClick }: LinkIndicatorProps) {
   const [linkingSummary, setLinkingSummary] = useState<ItemLinkingSummary | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -56,10 +57,28 @@ export function LinkIndicator({ itemId, showDetails = false, className = '' }: L
     )
   }
 
-  return (
-    <div className={`inline-flex items-center ${className}`} title={`${totalLinks} linked item(s)`}>
+  const content = (
+    <>
       <span className="text-blue-600 text-sm">🔗</span>
       <span className="text-xs text-gray-600 ml-1">{totalLinks}</span>
+    </>
+  )
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        className={`inline-flex items-center hover:bg-gray-100 rounded p-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${className}`}
+        title={`${totalLinks} linked item(s) - Click to view`}
+      >
+        {content}
+      </button>
+    )
+  }
+
+  return (
+    <div className={`inline-flex items-center ${className}`} title={`${totalLinks} linked item(s)`}>
+      {content}
     </div>
   )
 }

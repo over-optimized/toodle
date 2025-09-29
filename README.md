@@ -76,7 +76,7 @@ App will be available at `http://localhost:5173`
 - `pnpm lint` - ESLint validation (must pass with 0 errors)
 - `pnpm test` - Run unit tests
 - `pnpm test:coverage` - Generate coverage reports
-- `pnpm ci` - Full CI pipeline (lint + test + build)
+- `pnpm run ci` - Full CI pipeline (lint + test + build)
 
 ### Performance Analysis
 - `pnpm analyze` - Bundle size analysis with detailed breakdown
@@ -142,6 +142,17 @@ tests/
 - **Visual Indicators**: Clear link count badges and relationship displays
 - **Preserved Specialization**: Full linking functionality while maintaining each list type's unique features
 
+### Item Actions
+Each list item provides quick access to linking and management functions:
+
+| Action | Function | Description |
+|--------|----------|-------------|
+| 🔗 | View links | Show/hide items linked to this item |
+| ➕ | Quick link | Fast link creation to another item |
+| ⚙️ | Manage links | Comprehensive link management interface |
+| 🤖 | AI suggestions | Smart recommendations for potential links |
+| 🗑️ | Delete | Remove item permanently |
+
 ## 🔄 Real-time Features
 
 - **Live Updates**: See changes from other users instantly
@@ -199,7 +210,7 @@ pnpm build
 
 1. **Feature Branch**: Create from `main`
 2. **Development**: Use `pnpm dev` for hot reload
-3. **Quality Gates**: Run `pnpm ci` before commits
+3. **Quality Gates**: Run `pnpm run ci` before commits
 4. **Testing**: Ensure all tests pass
 5. **Documentation**: Update relevant docs
 6. **Pull Request**: Create for code review

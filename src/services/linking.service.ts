@@ -248,7 +248,7 @@ export class LinkingService {
         query = query.eq('lists.user_id', (await supabase.auth.getUser()).data.user?.id)
       }
 
-      const { data, error } = await query.order('lists.title').order('position')
+      const { data, error } = await query.order('lists(title)').order('position')
 
       return { data, error: error?.message || null }
     } catch (error) {

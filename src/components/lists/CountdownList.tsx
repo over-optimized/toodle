@@ -4,6 +4,7 @@ import { useRealtimeList, usePresence } from '../../hooks'
 import { useCountdownPerformance } from '../../hooks/useListPerformance'
 import { ValidationService } from '../../services/validation.service'
 import { LinkIndicator, LinkedItemsDisplay, ItemLinker, QuickLinkAdd, LinkSuggestions, BulkLinker } from '../items'
+import { ActionMenu, type ActionMenuItem } from '../ui'
 import type { List } from '../../types'
 import {
   DndContext,
@@ -475,45 +476,89 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                       )}
                     </div>
 
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
+                    <div className="flex items-center gap-2">
+                      {/* Link indicator that doubles as view links button on mobile */}
+                      <LinkIndicator
+                        itemId={item.id}
+                        showDetails={false}
+                        className="sm:hidden cursor-pointer"
                         onClick={() => handleToggleLinks(item.id)}
-                        className={`p-1 hover:text-blue-600 ${
-                          showLinksFor === item.id ? 'text-blue-600' : 'text-current'
-                        }`}
-                        title="View links"
-                      >
-                        🔗
-                      </button>
-                      <button
-                        onClick={() => handleOpenQuickLink(item.id)}
-                        className="p-1 text-current hover:text-green-600"
-                        title="Quick add link"
-                      >
-                        ➕
-                      </button>
-                      <button
-                        onClick={() => handleOpenLinker(item.id)}
-                        className="p-1 text-current hover:text-purple-600"
-                        title="Manage links"
-                      >
-                        ⚙️
-                      </button>
-                      <button
-                        onClick={() => handleOpenSuggestions(item.id)}
-                        className="p-1 text-current hover:text-yellow-600"
-                        title="AI link suggestions"
-                      >
-                        🤖
-                      </button>
-                      <button
-                        onClick={() => handleDeleteItem(item.id)}
-                        disabled={deleteItem.isPending}
-                        className="p-1 text-current hover:text-red-600 disabled:opacity-50"
-                        title="Delete item"
-                      >
-                        🗑️
-                      </button>
+                      />
+
+                      {/* Desktop: Individual buttons with hover visibility */}
+                      <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={() => handleToggleLinks(item.id)}
+                          className={`p-1 hover:text-blue-600 ${
+                            showLinksFor === item.id ? 'text-blue-600' : 'text-current'
+                          }`}
+                          title="View links"
+                        >
+                          🔗
+                        </button>
+                        <button
+                          onClick={() => handleOpenQuickLink(item.id)}
+                          className="p-1 text-current hover:text-green-600"
+                          title="Quick add link"
+                        >
+                          ➕
+                        </button>
+                        <button
+                          onClick={() => handleOpenLinker(item.id)}
+                          className="p-1 text-current hover:text-purple-600"
+                          title="Manage links"
+                        >
+                          ⚙️
+                        </button>
+                        <button
+                          onClick={() => handleOpenSuggestions(item.id)}
+                          className="p-1 text-current hover:text-yellow-600"
+                          title="AI link suggestions"
+                        >
+                          🤖
+                        </button>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          disabled={deleteItem.isPending}
+                          className="p-1 text-current hover:text-red-600 disabled:opacity-50"
+                          title="Delete item"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+
+                      {/* Mobile: Action menu */}
+                      <ActionMenu
+                        className="sm:hidden"
+                        items={[
+                          {
+                            id: 'quick-link',
+                            label: 'Quick add link',
+                            icon: '➕',
+                            onClick: () => handleOpenQuickLink(item.id)
+                          },
+                          {
+                            id: 'manage-links',
+                            label: 'Manage links',
+                            icon: '⚙️',
+                            onClick: () => handleOpenLinker(item.id)
+                          },
+                          {
+                            id: 'ai-suggestions',
+                            label: 'AI suggestions',
+                            icon: '🤖',
+                            onClick: () => handleOpenSuggestions(item.id)
+                          },
+                          {
+                            id: 'delete',
+                            label: 'Delete item',
+                            icon: '🗑️',
+                            onClick: () => handleDeleteItem(item.id),
+                            variant: 'destructive' as const,
+                            disabled: deleteItem.isPending
+                          }
+                        ]}
+                      />
                     </div>
                   </div>
                 </div>
@@ -580,45 +625,89 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                   )}
                 </div>
 
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
+                <div className="flex items-center gap-2">
+                  {/* Link indicator that doubles as view links button on mobile */}
+                  <LinkIndicator
+                    itemId={item.id}
+                    showDetails={false}
+                    className="sm:hidden cursor-pointer"
                     onClick={() => handleToggleLinks(item.id)}
-                    className={`p-1 hover:text-blue-600 ${
-                      showLinksFor === item.id ? 'text-blue-600' : 'text-gray-400'
-                    }`}
-                    title="View links"
-                  >
-                    🔗
-                  </button>
-                  <button
-                    onClick={() => handleOpenQuickLink(item.id)}
-                    className="p-1 text-gray-400 hover:text-green-600"
-                    title="Quick add link"
-                  >
-                    ➕
-                  </button>
-                  <button
-                    onClick={() => handleOpenLinker(item.id)}
-                    className="p-1 text-gray-400 hover:text-purple-600"
-                    title="Manage links"
-                  >
-                    ⚙️
-                  </button>
-                  <button
-                    onClick={() => handleOpenSuggestions(item.id)}
-                    className="p-1 text-gray-400 hover:text-yellow-600"
-                    title="AI link suggestions"
-                  >
-                    🤖
-                  </button>
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    disabled={deleteItem.isPending}
-                    className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50"
-                    title="Delete item"
-                  >
-                    🗑️
-                  </button>
+                  />
+
+                  {/* Desktop: Individual buttons with hover visibility */}
+                  <div className="hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleToggleLinks(item.id)}
+                      className={`p-1 hover:text-blue-600 ${
+                        showLinksFor === item.id ? 'text-blue-600' : 'text-gray-400'
+                      }`}
+                      title="View links"
+                    >
+                      🔗
+                    </button>
+                    <button
+                      onClick={() => handleOpenQuickLink(item.id)}
+                      className="p-1 text-gray-400 hover:text-green-600"
+                      title="Quick add link"
+                    >
+                      ➕
+                    </button>
+                    <button
+                      onClick={() => handleOpenLinker(item.id)}
+                      className="p-1 text-gray-400 hover:text-purple-600"
+                      title="Manage links"
+                    >
+                      ⚙️
+                    </button>
+                    <button
+                      onClick={() => handleOpenSuggestions(item.id)}
+                      className="p-1 text-gray-400 hover:text-yellow-600"
+                      title="AI link suggestions"
+                    >
+                      🤖
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.id)}
+                      disabled={deleteItem.isPending}
+                      className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                      title="Delete item"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+
+                  {/* Mobile: Action menu */}
+                  <ActionMenu
+                    className="sm:hidden"
+                    items={[
+                      {
+                        id: 'quick-link',
+                        label: 'Quick add link',
+                        icon: '➕',
+                        onClick: () => handleOpenQuickLink(item.id)
+                      },
+                      {
+                        id: 'manage-links',
+                        label: 'Manage links',
+                        icon: '⚙️',
+                        onClick: () => handleOpenLinker(item.id)
+                      },
+                      {
+                        id: 'ai-suggestions',
+                        label: 'AI suggestions',
+                        icon: '🤖',
+                        onClick: () => handleOpenSuggestions(item.id)
+                      },
+                      {
+                        id: 'delete',
+                        label: 'Delete item',
+                        icon: '🗑️',
+                        onClick: () => handleDeleteItem(item.id),
+                        variant: 'destructive' as const,
+                        disabled: deleteItem.isPending
+                      }
+                    ]}
+                  />
                 </div>
               </div>
             ))}

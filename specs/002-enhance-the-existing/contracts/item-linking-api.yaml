@@ -1,0 +1,362 @@
+openapi: 3.0.3
+info:
+  title: Behavioral Cross-List Linking API
+  description: API contracts for parent-child hierarchical linking with status propagation
+  version: 1.0.0
+
+paths:
+  /rest/v1/rpc/create_parent_child_link:
+    post:
+      summary: Create parent-child relationship between items
+      description: Establishes hierarchical link where parent can control child status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_item_id:
+                  type: string
+                  format: uuid
+                  description: UUID of parent item
+                child_item_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Array of child item UUIDs
+                  maxItems: 20
+              required:
+                - parent_item_id
+                - child_item_ids
+      responses:
+        '200':
+          description: Links created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  links_created:
+                    type: integer
+                  warnings:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Circular dependency or self-link detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /rest/v1/rpc/remove_parent_child_link:
+    post:
+      summary: Remove parent-child relationship
+      description: Breaks hierarchical link between parent and child items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_item_id:
+                  type: string
+                  format: uuid
+                child_item_id:
+                  type: string
+                  format: uuid
+              required:
+                - parent_item_id
+                - child_item_id
+      responses:
+        '200':
+          description: Link removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+        '404':
+          description: Link not found
+
+  /rest/v1/rpc/get_child_items:
+    post:
+      summary: Get all child items for a parent
+      description: Retrieves items controlled by the specified parent item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_item_id:
+                  type: string
+                  format: uuid
+              required:
+                - parent_item_id
+      responses:
+        '200':
+          description: Child items retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LinkedItemInfo'
+
+  /rest/v1/rpc/get_parent_items:
+    post:
+      summary: Get all parent items for a child
+      description: Retrieves items that control the specified child item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                child_item_id:
+                  type: string
+                  format: uuid
+              required:
+                - child_item_id
+      responses:
+        '200':
+          description: Parent items retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LinkedItemInfo'
+
+  /rest/v1/rpc/validate_link_creation:
+    post:
+      summary: Validate parent-child link before creation
+      description: Checks for circular dependencies and other validation rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                parent_item_id:
+                  type: string
+                  format: uuid
+                child_item_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+              required:
+                - parent_item_id
+                - child_item_ids
+      responses:
+        '200':
+          description: Validation results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkValidationResult'
+
+  # Enhanced existing endpoint
+  /rest/v1/items:
+    patch:
+      summary: Update item with status propagation
+      description: Update item properties with automatic parent-child status propagation
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ItemUpdateRequest'
+      responses:
+        '200':
+          description: Item updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Item'
+                  propagated_updates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        item_id:
+                          type: string
+                          format: uuid
+                        old_status:
+                          type: boolean
+                        new_status:
+                          type: boolean
+                    description: Child items that were automatically updated
+
+components:
+  schemas:
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        list_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+          maxLength: 500
+        is_completed:
+          type: boolean
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        target_date:
+          type: string
+          format: date
+          nullable: true
+        position:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        linked_items:
+          $ref: '#/components/schemas/LinkedItemsData'
+
+    LinkedItemsData:
+      type: object
+      properties:
+        children:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Child item UUIDs controlled by this item
+        parents:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Parent item UUIDs that control this item
+        bidirectional:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Legacy informational links (no behavioral control)
+      additionalProperties: false
+
+    LinkedItemInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        list_id:
+          type: string
+          format: uuid
+        content:
+          type: string
+        is_completed:
+          type: boolean
+        list_title:
+          type: string
+        list_type:
+          type: string
+          enum: [simple, grocery, countdown]
+
+    ItemUpdateRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 500
+        is_completed:
+          type: boolean
+        target_date:
+          type: string
+          format: date
+          nullable: true
+        position:
+          type: number
+        linked_items:
+          $ref: '#/components/schemas/LinkedItemsData'
+
+    LinkValidationResult:
+      type: object
+      properties:
+        can_link:
+          type: boolean
+          description: Whether all requested links can be created
+        valid_links:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Child IDs that can be linked successfully
+        invalid_links:
+          type: array
+          items:
+            type: object
+            properties:
+              child_id:
+                type: string
+                format: uuid
+              reason:
+                type: string
+                enum: [circular_dependency, self_link, item_not_found, permission_denied]
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-blocking warnings about the link creation
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          enum: [CIRCULAR_DEPENDENCY, SELF_LINK, ITEM_NOT_FOUND, PERMISSION_DENIED, VALIDATION_ERROR]
+        details:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    supabaseAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - supabaseAuth: []
