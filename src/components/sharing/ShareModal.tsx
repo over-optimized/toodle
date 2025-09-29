@@ -10,7 +10,7 @@ interface ShareModalProps {
 
 export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
   const [email, setEmail] = useState('')
-  const [permission, setPermission] = useState<'read' | 'write'>('read')
+  const [role, setRole] = useState<'read' | 'edit'>('read')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [shareLink, setShareLink] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
 
       await createShare.mutateAsync({
         shared_with_email: email.trim(),
-        permission,
+        role,
         expires_at: expiresAt.toISOString()
       })
 
@@ -43,7 +43,7 @@ export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
       setEmail('')
 
       // Generate shareable link (could be enhanced to use actual share ID)
-      const link = `${window.location.origin}/shared/${list.id}?permission=${permission}`
+      const link = `${window.location.origin}/shared/${list.id}?role=${role}`
       setShareLink(link)
     } catch (error) {
       setError('Failed to share list. Please try again.')
@@ -104,10 +104,10 @@ export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="permission"
+                  name="role"
                   value="read"
-                  checked={permission === 'read'}
-                  onChange={(e) => setPermission(e.target.value as 'read' | 'write')}
+                  checked={role === 'read'}
+                  onChange={(e) => setRole(e.target.value as 'read' | 'edit')}
                   className="mr-2"
                   disabled={createShare.isPending}
                 />
@@ -116,10 +116,10 @@ export function ShareModal({ list, isOpen, onClose }: ShareModalProps) {
               <label className="flex items-center">
                 <input
                   type="radio"
-                  name="permission"
-                  value="write"
-                  checked={permission === 'write'}
-                  onChange={(e) => setPermission(e.target.value as 'read' | 'write')}
+                  name="role"
+                  value="edit"
+                  checked={role === 'edit'}
+                  onChange={(e) => setRole(e.target.value as 'read' | 'edit')}
                   className="mr-2"
                   disabled={createShare.isPending}
                 />

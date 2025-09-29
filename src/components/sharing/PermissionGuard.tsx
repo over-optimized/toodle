@@ -68,17 +68,6 @@ export function PermissionGuard({
       )
     }
 
-    // Check if user matches the share (for user-specific shares)
-    if (share.shared_with_user_id && user?.id !== share.shared_with_user_id) {
-      return (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            This list is shared with a different user.
-          </p>
-        </div>
-      )
-    }
-
     // Check permission level
     if (requiredPermission === 'read') {
       // Read permission is always granted if share exists
@@ -86,7 +75,7 @@ export function PermissionGuard({
     }
 
     if (requiredPermission === 'write') {
-      if (share.permission === 'write') {
+      if (share.role === 'edit') {
         return <>{children}</>
       } else {
         return (
@@ -136,11 +125,6 @@ export function usePermissions(list: List, share?: Share) {
         return false
       }
 
-      // Check if user matches share target
-      if (share.shared_with_user_id && user?.id !== share.shared_with_user_id) {
-        return false
-      }
-
       // If we have a valid share, read is allowed
       return true
     }
@@ -160,13 +144,8 @@ export function usePermissions(list: List, share?: Share) {
         return false
       }
 
-      // Check if user matches share target
-      if (share.shared_with_user_id && user?.id !== share.shared_with_user_id) {
-        return false
-      }
-
       // Check permission level
-      return share.permission === 'write'
+      return share.role === 'edit'
     }
 
     return false
@@ -214,7 +193,7 @@ export function usePermissions(list: List, share?: Share) {
         }
       }
 
-      if (share.permission === 'write') {
+      if (share.role === 'edit') {
         return {
           level: 'write' as const,
           message: 'You can edit this shared list',

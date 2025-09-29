@@ -193,8 +193,7 @@ export const ListView = memo(function ListView() {
         {showShareModal && (
           <Suspense fallback={<LoadingSpinner size="sm" text="Loading share options..." />}>
             <ShareModal
-              listId={list.id}
-              listTitle={list.title}
+              list={list}
               isOpen={showShareModal}
               onClose={() => setShowShareModal(false)}
             />

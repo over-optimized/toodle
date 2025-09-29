@@ -289,7 +289,7 @@ export class OfflineService {
   async getListItems(listId: string): Promise<{ data: Item[] | null; error: string | null }> {
     try {
       if (this.isOnline) {
-        const result = await itemService.getItems(listId)
+        const result = await itemService.getItemsByListId(listId)
         if (result.data) {
           for (const item of result.data) {
             await offlineDb.saveItem(item)

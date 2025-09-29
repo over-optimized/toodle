@@ -12,6 +12,7 @@ Enhancing existing informational linking to support parent-child hierarchical re
 - **Backend**: Supabase (PostgreSQL + Realtime + Auth)
 - **Testing**: Vitest + React Testing Library
 - **Build**: Vite, pnpm
+- **Development Tools**: Chrome DevTools MCP for browser testing and debugging
 
 ## Architecture
 - Progressive Web App with offline-first capabilities

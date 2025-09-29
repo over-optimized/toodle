@@ -2,13 +2,13 @@ import { create } from 'zustand'
 import { authService } from '../services/auth'
 
 interface AuthState {
-  user: { id: string; email: string } | null
+  user: { id: string; email: string; display_name?: string } | null
   isLoading: boolean
   isAuthenticated: boolean
   signInWithMagicLink: (email: string, redirectTo?: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   initialize: () => Promise<void>
-  setUser: (user: { id: string; email: string } | null) => void
+  setUser: (user: { id: string; email: string; display_name?: string } | null) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -41,7 +41,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     authService.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         set({
-          user: { id: session.user.id, email: session.user.email! },
+          user: {
+            id: session.user.id,
+            email: session.user.email!,
+            display_name: session.user.user_metadata?.display_name
+          },
           isAuthenticated: true
         })
       } else if (event === 'SIGNED_OUT') {
@@ -50,7 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
   },
 
-  setUser: (user: { id: string; email: string } | null) => {
+  setUser: (user: { id: string; email: string; display_name?: string } | null) => {
     set({ user, isAuthenticated: !!user })
   }
 }))

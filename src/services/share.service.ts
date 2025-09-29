@@ -33,6 +33,23 @@ export class ShareService {
     }
   }
 
+  async getShare(shareId: string): Promise<{ data: Share | null; error: string | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('shares')
+        .select('*')
+        .eq('id', shareId)
+        .single()
+
+      return { data, error: error?.message || null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
   async getSharesForList(listId: string): Promise<{ data: Share[] | null; error: string | null }> {
     try {
       const { data, error } = await supabase
@@ -67,7 +84,7 @@ export class ShareService {
     }
   }
 
-  async revokeShare(shareId: string): Promise<{ error: string | null }> {
+  async deleteShare(shareId: string): Promise<{ error: string | null }> {
     try {
       const { error } = await supabase
         .from('shares')
@@ -77,6 +94,26 @@ export class ShareService {
       return { error: error?.message || null }
     } catch (error) {
       return {
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  async revokeShare(shareId: string): Promise<{ error: string | null }> {
+    return this.deleteShare(shareId)
+  }
+
+  async getShares(): Promise<{ data: Share[] | null; error: string | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('shares')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      return { data, error: error?.message || null }
+    } catch (error) {
+      return {
+        data: null,
         error: error instanceof Error ? error.message : 'Unknown error'
       }
     }

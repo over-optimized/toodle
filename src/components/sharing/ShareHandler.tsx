@@ -60,12 +60,7 @@ export function ShareHandler({ children }: ShareHandlerProps) {
         setList(listResult.data)
         setIsLoading(false)
 
-        // If user is authenticated and the share is for them specifically,
-        // we could redirect to the normal list view
-        if (user && shareData.shared_with_user_id === user.id) {
-          navigate(`/lists/${listResult.data.id}`)
-          return
-        }
+        // User is authenticated, can access shared list
 
       } catch (error) {
         console.error('Failed to load shared list:', error)
@@ -153,7 +148,7 @@ export function SharedListPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.935-2.186 2.25 2.25 0 00-3.935 2.186z" />
                 </svg>
                 <span className="text-sm font-medium text-blue-800">
-                  Shared list • {share.permission === 'read' ? 'View only' : 'Can edit'}
+                  Shared list • {share.role === 'read' ? 'View only' : 'Can edit'}
                 </span>
                 {share.expires_at && (
                   <span className="text-xs text-blue-600">
@@ -166,12 +161,9 @@ export function SharedListPage() {
             {/* List content */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-4">{list.title}</h1>
-              {list.description && (
-                <p className="text-gray-600 mb-6">{list.description}</p>
-              )}
 
               {/* Note about permissions */}
-              {share.permission === 'read' && (
+              {share.role === 'read' && (
                 <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <p className="text-sm text-yellow-800">
                     This is a read-only view. You can see the items but cannot make changes.

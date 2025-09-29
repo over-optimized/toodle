@@ -34,10 +34,11 @@ export class LinkingService {
       }
 
       // Merge new links with existing ones (avoid duplicates)
-      const currentLinks = currentItem.linked_items || []
+      const currentLinks = (currentItem as any).linked_items || []
       const newLinks = [...new Set([...currentLinks, ...targetItemIds])]
 
       // Update the item with new linked items
+      // @ts-ignore - Supabase type inference issue with jsonb field
       const { data, error } = await supabase
         .from('items')
         .update({ linked_items: newLinks })
@@ -71,11 +72,12 @@ export class LinkingService {
       }
 
       // Remove specified links
-      const currentLinks = currentItem.linked_items || []
-      const newLinks = currentLinks.filter(linkId => !targetItemIds.includes(linkId))
+      const currentLinks = (currentItem as any).linked_items || []
+      const newLinks = currentLinks.filter((linkId: string) => !targetItemIds.includes(linkId))
 
       // Update the item with new linked items
-      const { data, error } = await supabase
+      // @ts-ignore - Supabase type inference issue with jsonb field
+      const { data, error} = await supabase
         .from('items')
         .update({ linked_items: newLinks })
         .eq('id', sourceItemId)
@@ -106,6 +108,7 @@ export class LinkingService {
       }
 
       // Update the item with new linked items
+      // @ts-ignore - Supabase type inference issue with jsonb field
       const { data, error } = await supabase
         .from('items')
         .update({ linked_items: targetItemIds })
@@ -127,6 +130,7 @@ export class LinkingService {
    */
   async getLinkedItemsInfo(sourceItemId: string): Promise<{ data: LinkedItemInfo[] | null; error: string | null }> {
     try {
+      // @ts-ignore - Supabase RPC type inference issue
       const { data, error } = await supabase
         .rpc('get_linked_items_info', { source_item_id: sourceItemId })
 
@@ -144,6 +148,7 @@ export class LinkingService {
    */
   async getItemsLinkingTo(targetItemId: string): Promise<{ data: LinkedItemInfo[] | null; error: string | null }> {
     try {
+      // @ts-ignore - Supabase RPC type inference issue
       const { data, error } = await supabase
         .rpc('get_items_linking_to', { target_item_id: targetItemId })
 
@@ -245,7 +250,10 @@ export class LinkingService {
         query = query.in('list_id', listIds)
       } else {
         // Otherwise, get items from all lists owned by the same user
-        query = query.eq('lists.user_id', (await supabase.auth.getUser()).data.user?.id)
+        const userId = (await supabase.auth.getUser()).data.user?.id
+        if (userId) {
+          query = query.eq('lists.user_id', userId)
+        }
       }
 
       const { data, error } = await query.order('lists(title)').order('position')
@@ -276,8 +284,9 @@ export class LinkingService {
 
       // Update each item to remove the deleted item from its links
       if (linkingItems && linkingItems.length > 0) {
-        const updates = linkingItems.map(async (item) => {
-          const newLinks = (item.linked_items || []).filter(linkId => linkId !== itemId)
+        const updates = linkingItems.map(async (item: any) => {
+          const newLinks = (item.linked_items || []).filter((linkId: string) => linkId !== itemId)
+          // @ts-ignore - Supabase type inference issue with jsonb field
           return supabase
             .from('items')
             .update({ linked_items: newLinks })
@@ -316,7 +325,7 @@ export class LinkingService {
       }
 
       // Check current link count
-      const currentLinks = sourceItem.linked_items || []
+      const currentLinks = (sourceItem as any).linked_items || []
       const totalAfterAdd = new Set([...currentLinks, ...targetItemIds]).size
 
       if (totalAfterAdd > 50) {
@@ -335,7 +344,7 @@ export class LinkingService {
           return { isValid: false, errors, warnings }
         }
 
-        const foundTargetIds = targetItems?.map(item => item.id) || []
+        const foundTargetIds = targetItems?.map((item: any) => item.id) || []
         const missingIds = targetItemIds.filter(id => !foundTargetIds.includes(id))
 
         if (missingIds.length > 0) {
@@ -343,8 +352,8 @@ export class LinkingService {
         }
 
         // Check if all target items belong to same user
-        const sourceUserId = sourceItem.lists.user_id
-        const invalidTargets = targetItems?.filter(item => item.lists.user_id !== sourceUserId) || []
+        const sourceUserId = (sourceItem as any).lists.user_id
+        const invalidTargets = targetItems?.filter((item: any) => item.lists.user_id !== sourceUserId) || []
 
         if (invalidTargets.length > 0) {
           errors.push('Cannot link to items from different users')

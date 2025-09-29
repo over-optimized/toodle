@@ -60,11 +60,11 @@ export function usePresence(listId: string | null) {
 
     // Subscribe to presence changes
     const presenceSubscription = realtimeManager.subscribeToPresence(listId, {
-      onJoin: (key, currentPresences, newPresences) => {
+      onJoin: (key, _currentPresences, newPresences) => {
         console.log('User joined:', key, newPresences)
         updatePresenceState()
       },
-      onLeave: (key, currentPresences, leftPresences) => {
+      onLeave: (key, _currentPresences, leftPresences) => {
         console.log('User left:', key, leftPresences)
         updatePresenceState()
       },

@@ -190,8 +190,8 @@ export class SyncService {
         return null // Handle in normal sync flow
       }
 
-      const { data: shares } = await shareService.getShares(local.list_id)
-      const remote = shares?.find(s => s.id === local.id)
+      const { data: shares } = await shareService.getSharesForList(local.list_id)
+      const remote = shares?.find((s: Share) => s.id === local.id)
 
       if (!remote) {
         return {
@@ -384,11 +384,11 @@ export class SyncService {
   ): Promise<OfflineList | OfflineItem | OfflineShare | null> {
     switch (type) {
       case 'list':
-        return offlineDb.lists.get(recordId) || null
+        return (await offlineDb.lists.get(recordId)) || null
       case 'item':
-        return offlineDb.items.get(recordId) || null
+        return (await offlineDb.items.get(recordId)) || null
       case 'share':
-        return offlineDb.shares.get(recordId) || null
+        return (await offlineDb.shares.get(recordId)) || null
       default:
         return null
     }

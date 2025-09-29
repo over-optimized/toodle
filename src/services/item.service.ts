@@ -76,6 +76,39 @@ export class ItemService {
     }
   }
 
+  async getItem(id: string): Promise<{ data: Item | null; error: string | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      return { data, error: error?.message || null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  async getItems(): Promise<{ data: Item[] | null; error: string | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('position')
+
+      return { data, error: error?.message || null }
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
   async getItemsByListId(listId: string): Promise<{ data: Item[] | null; error: string | null }> {
     try {
       const { data, error } = await supabase
@@ -141,8 +174,9 @@ export class ItemService {
 
     if (linkingItems && linkingItems.length > 0) {
       // Update each item to remove the deleted item from its links
-      const updates = linkingItems.map(async (item) => {
-        const newLinks = (item.linked_items || []).filter(linkId => linkId !== itemId)
+      const updates = linkingItems.map(async (item: any) => {
+        const newLinks = (item.linked_items || []).filter((linkId: string) => linkId !== itemId)
+        // @ts-ignore - Supabase type inference issue with jsonb field
         return supabase
           .from('items')
           .update({ linked_items: newLinks })
