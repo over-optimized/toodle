@@ -212,7 +212,7 @@ export class LinkingService {
   async getLinkableItems(sourceItemId: string, listIds?: string[]): Promise<{ data: Item[] | null; error: string | null }> {
     try {
       // Get the source item to find its list
-      const { data: sourceItem, error: sourceError } = await supabase
+      const { data: _sourceItem, error: sourceError } = await supabase
         .from('items')
         .select('list_id')
         .eq('id', sourceItemId)

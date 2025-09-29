@@ -373,7 +373,7 @@ export class OfflineService {
 
   private async executePendingListOperation(operation: PendingOperation): Promise<void> {
     switch (operation.type) {
-      case 'create':
+      case 'create': {
         const createResult = await listService.createList(operation.data)
         if (createResult.data && createResult.data.id !== operation.recordId) {
           await offlineDb.lists.delete(operation.recordId)
@@ -381,6 +381,7 @@ export class OfflineService {
           await offlineDb.markSynced('lists', createResult.data.id)
         }
         break
+      }
       case 'update':
         await listService.updateList(operation.recordId, operation.data)
         await offlineDb.markSynced('lists', operation.recordId)
@@ -393,7 +394,7 @@ export class OfflineService {
 
   private async executePendingItemOperation(operation: PendingOperation): Promise<void> {
     switch (operation.type) {
-      case 'create':
+      case 'create': {
         const createResult = await itemService.createItem(operation.data.list_id, operation.data)
         if (createResult.data && createResult.data.id !== operation.recordId) {
           await offlineDb.items.delete(operation.recordId)
@@ -401,6 +402,7 @@ export class OfflineService {
           await offlineDb.markSynced('items', createResult.data.id)
         }
         break
+      }
       case 'update':
         await itemService.updateItem(operation.recordId, operation.data)
         await offlineDb.markSynced('items', operation.recordId)
@@ -413,7 +415,7 @@ export class OfflineService {
 
   private async executePendingShareOperation(operation: PendingOperation): Promise<void> {
     switch (operation.type) {
-      case 'create':
+      case 'create': {
         const createResult = await shareService.createShare(operation.data.list_id, operation.data)
         if (createResult.data && createResult.data.id !== operation.recordId) {
           await offlineDb.shares.delete(operation.recordId)
@@ -421,6 +423,7 @@ export class OfflineService {
           await offlineDb.markSynced('shares', createResult.data.id)
         }
         break
+      }
       case 'delete':
         await shareService.deleteShare(operation.recordId)
         break

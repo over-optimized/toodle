@@ -3,6 +3,7 @@ import { useItems, useItemMutations } from '../../hooks'
 import { useRealtimeList, usePresence } from '../../hooks'
 import { useCountdownPerformance } from '../../hooks/useListPerformance'
 import { ValidationService } from '../../services/validation.service'
+import { LinkIndicator, LinkedItemsDisplay, ItemLinker, QuickLinkAdd, LinkSuggestions, BulkLinker } from '../items'
 import type { List } from '../../types'
 import {
   DndContext,
@@ -33,6 +34,15 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
   const [editTargetDate, setEditTargetDate] = useState('')
+
+  // Linking state management
+  const [showLinksFor, setShowLinksFor] = useState<string | null>(null)
+  const [linkingItemId, setLinkingItemId] = useState<string | null>(null)
+  const [quickLinkItemId, setQuickLinkItemId] = useState<string | null>(null)
+  const [suggestionsItemId, setSuggestionsItemId] = useState<string | null>(null)
+  const [selectedItems, setSelectedItems] = useState<string[]>([])
+  const [showBulkLinker, setShowBulkLinker] = useState(false)
+  const [enableBulkOperations, setEnableBulkOperations] = useState(false)
 
   const { data: items = [], isLoading, error } = useItems(list.id)
   const { createItem, updateItem, deleteItem, reorderItems } = useItemMutations(list.id)
@@ -111,7 +121,7 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
   const handleSaveEdit = async (itemId: string) => {
     if (!editContent.trim()) return
 
-    let updates: any = { content: editContent.trim() }
+    const updates: any = { content: editContent.trim() }
 
     if (editTargetDate) {
       const targetDate = new Date(editTargetDate)
@@ -148,6 +158,52 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
       await deleteItem.mutateAsync(itemId)
     } catch (error) {
       console.error('Failed to delete item:', error)
+    }
+  }
+
+  // Linking handlers
+  const handleToggleLinks = (itemId: string) => {
+    setShowLinksFor(showLinksFor === itemId ? null : itemId)
+  }
+
+  const handleOpenLinker = (itemId: string) => {
+    setLinkingItemId(itemId)
+  }
+
+  const handleOpenQuickLink = (itemId: string) => {
+    setQuickLinkItemId(itemId)
+  }
+
+  const handleOpenSuggestions = (itemId: string) => {
+    setSuggestionsItemId(itemId)
+  }
+
+  const handleLinksUpdated = () => {
+    setShowLinksFor(null)
+    setLinkingItemId(null)
+    setQuickLinkItemId(null)
+    setSuggestionsItemId(null)
+  }
+
+  const handleItemSelect = (itemId: string) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId)
+        ? prev.filter(id => id !== itemId)
+        : [...prev, itemId]
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([])
+    } else {
+      setSelectedItems(items.map(item => item.id))
+    }
+  }
+
+  const handleBulkOperation = () => {
+    if (selectedItems.length > 0) {
+      setShowBulkLinker(true)
     }
   }
 
@@ -247,6 +303,52 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
         </div>
       )}
 
+      {/* Bulk operations */}
+      {items.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableBulkOperations}
+                  onChange={(e) => {
+                    setEnableBulkOperations(e.target.checked)
+                    if (!e.target.checked) {
+                      setSelectedItems([])
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Enable Bulk Operations
+                </span>
+              </label>
+              {enableBulkOperations && (
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.length === items.length && items.length > 0}
+                    onChange={handleSelectAll}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">
+                    Select All ({selectedItems.length}/{items.length})
+                  </span>
+                </label>
+              )}
+            </div>
+            {enableBulkOperations && selectedItems.length > 0 && (
+              <button
+                onClick={handleBulkOperation}
+                className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+              >
+                Bulk Link ({selectedItems.length} items)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Pending items with countdowns */}
       {pendingItems.length > 0 && (
@@ -265,11 +367,19 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
               return (
                 <div
                   key={item.id}
-                  className={`p-4 border rounded-lg ${urgencyColor} ${
+                  className={`group p-4 border rounded-lg ${urgencyColor} ${
                     timeRemaining.isExpired ? 'ring-2 ring-red-300' : ''
                   }`}
                 >
                   <div className="flex items-start gap-3">
+                    {enableBulkOperations && (
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item.id)}
+                        onChange={() => handleItemSelect(item.id)}
+                        className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    )}
                     <button
                       onClick={() => handleToggleComplete(item.id, item.is_completed)}
                       disabled={updateItem.isPending}
@@ -321,12 +431,22 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                         </div>
                       ) : (
                         <>
-                          <div
-                            className="font-medium cursor-pointer"
-                            onClick={() => handleStartEdit(item.id, item.content, item.target_date)}
-                          >
-                            {item.content}
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="font-medium cursor-pointer"
+                              onClick={() => handleStartEdit(item.id, item.content, item.target_date)}
+                            >
+                              {item.content}
+                            </div>
+                            <LinkIndicator itemId={item.id} />
                           </div>
+
+                          {showLinksFor === item.id && (
+                            <LinkedItemsDisplay
+                              itemId={item.id}
+                              onLinkRemoved={handleLinksUpdated}
+                            />
+                          )}
 
                           <div className="text-sm opacity-75">
                             Due: {new Date(item.target_date).toLocaleString()}
@@ -355,16 +475,46 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                       )}
                     </div>
 
-                    <button
-                      onClick={() => handleDeleteItem(item.id)}
-                      disabled={deleteItem.isPending}
-                      className="text-current hover:opacity-75 focus:outline-none disabled:opacity-50"
-                      aria-label="Delete item"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleToggleLinks(item.id)}
+                        className={`p-1 hover:text-blue-600 ${
+                          showLinksFor === item.id ? 'text-blue-600' : 'text-current'
+                        }`}
+                        title="View links"
+                      >
+                        🔗
+                      </button>
+                      <button
+                        onClick={() => handleOpenQuickLink(item.id)}
+                        className="p-1 text-current hover:text-green-600"
+                        title="Quick add link"
+                      >
+                        ➕
+                      </button>
+                      <button
+                        onClick={() => handleOpenLinker(item.id)}
+                        className="p-1 text-current hover:text-purple-600"
+                        title="Manage links"
+                      >
+                        ⚙️
+                      </button>
+                      <button
+                        onClick={() => handleOpenSuggestions(item.id)}
+                        className="p-1 text-current hover:text-yellow-600"
+                        title="AI link suggestions"
+                      >
+                        🤖
+                      </button>
+                      <button
+                        onClick={() => handleDeleteItem(item.id)}
+                        disabled={deleteItem.isPending}
+                        className="p-1 text-current hover:text-red-600 disabled:opacity-50"
+                        title="Delete item"
+                      >
+                        🗑️
+                      </button>
+                    </div>
                   </div>
                 </div>
               )
@@ -384,8 +534,16 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
             {completedItems.map(item => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                className="group flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
               >
+                {enableBulkOperations && (
+                  <input
+                    type="checkbox"
+                    checked={selectedItems.includes(item.id)}
+                    onChange={() => handleItemSelect(item.id)}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                )}
                 <button
                   onClick={() => handleToggleComplete(item.id, item.is_completed)}
                   disabled={updateItem.isPending}
@@ -397,8 +555,19 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                   </svg>
                 </button>
 
-                <div className="flex-1">
-                  <span className="text-gray-600 line-through">{item.content}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600 line-through">{item.content}</span>
+                    <LinkIndicator itemId={item.id} />
+                  </div>
+
+                  {showLinksFor === item.id && (
+                    <LinkedItemsDisplay
+                      itemId={item.id}
+                      onLinkRemoved={handleLinksUpdated}
+                    />
+                  )}
+
                   {item.target_date && (
                     <div className="text-xs text-gray-500">
                       Due was: {new Date(item.target_date).toLocaleString()}
@@ -411,16 +580,46 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
                   )}
                 </div>
 
-                <button
-                  onClick={() => handleDeleteItem(item.id)}
-                  disabled={deleteItem.isPending}
-                  className="text-red-600 hover:text-red-800 focus:outline-none disabled:opacity-50"
-                  aria-label="Delete item"
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleToggleLinks(item.id)}
+                    className={`p-1 hover:text-blue-600 ${
+                      showLinksFor === item.id ? 'text-blue-600' : 'text-gray-400'
+                    }`}
+                    title="View links"
+                  >
+                    🔗
+                  </button>
+                  <button
+                    onClick={() => handleOpenQuickLink(item.id)}
+                    className="p-1 text-gray-400 hover:text-green-600"
+                    title="Quick add link"
+                  >
+                    ➕
+                  </button>
+                  <button
+                    onClick={() => handleOpenLinker(item.id)}
+                    className="p-1 text-gray-400 hover:text-purple-600"
+                    title="Manage links"
+                  >
+                    ⚙️
+                  </button>
+                  <button
+                    onClick={() => handleOpenSuggestions(item.id)}
+                    className="p-1 text-gray-400 hover:text-yellow-600"
+                    title="AI link suggestions"
+                  >
+                    🤖
+                  </button>
+                  <button
+                    onClick={() => handleDeleteItem(item.id)}
+                    disabled={deleteItem.isPending}
+                    className="p-1 text-gray-400 hover:text-red-600 disabled:opacity-50"
+                    title="Delete item"
+                  >
+                    🗑️
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -484,6 +683,43 @@ export const CountdownList = memo(function CountdownList({ list }: CountdownList
           </p>
         </form>
       </div>
+
+      {/* Linking Modals */}
+      {linkingItemId && (
+        <ItemLinker
+          sourceItem={items.find(item => item.id === linkingItemId)!}
+          onLinksUpdated={handleLinksUpdated}
+          onClose={() => setLinkingItemId(null)}
+        />
+      )}
+
+      {quickLinkItemId && (
+        <QuickLinkAdd
+          sourceItemId={quickLinkItemId}
+          onLinkAdded={handleLinksUpdated}
+          onClose={() => setQuickLinkItemId(null)}
+        />
+      )}
+
+      {suggestionsItemId && (
+        <LinkSuggestions
+          sourceItem={items.find(item => item.id === suggestionsItemId)!}
+          onSuggestionApplied={handleLinksUpdated}
+          onClose={() => setSuggestionsItemId(null)}
+        />
+      )}
+
+      {showBulkLinker && selectedItems.length > 0 && (
+        <BulkLinker
+          selectedItems={items.filter(item => selectedItems.includes(item.id))}
+          onOperationComplete={() => {
+            handleLinksUpdated()
+            setSelectedItems([])
+            setShowBulkLinker(false)
+          }}
+          onClose={() => setShowBulkLinker(false)}
+        />
+      )}
     </div>
     </DndContext>
   )

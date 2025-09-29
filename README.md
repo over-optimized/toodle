@@ -13,7 +13,7 @@ A mobile-first Progressive Web App for managing three types of lists: simple to-
 - **🔄 Real-time Collaboration**: Live updates and presence detection
 - **📱 Offline-First**: Works without internet, syncs when reconnected
 - **🔗 Private Sharing**: Share lists with magic links and permission controls
-- **🔗 Cross-List Linking**: Link related items across different lists (Phase 3 - Coming Soon)
+- **🔗 Cross-List Linking**: Link related items across different lists with smart suggestions and bulk operations
 - **🎯 Smart Limits**: 10 lists per user, 100 items per list (per spec)
 - **⚡ Performance Optimized**: Code splitting, memoization, and bundle analysis
 - **🎯 Drag-to-Sort**: Intuitive reordering within completion status boundaries
@@ -92,6 +92,7 @@ App will be available at `http://localhost:5173`
 src/
 ├── components/          # React components
 │   ├── auth/           # Authentication components
+│   ├── items/          # Cross-list linking components
 │   ├── lists/          # List management components
 │   ├── sharing/        # Sharing system components
 │   ├── ui/             # Reusable UI components
@@ -131,6 +132,15 @@ tests/
 - **Installation**: Install as native app on mobile devices
 - **Push Notifications**: Coming soon
 - **App Shell**: Fast loading architecture
+
+## 🔗 Cross-List Linking Features
+
+- **Smart Linking**: Connect related items across Simple, Grocery, and Countdown lists
+- **Bulk Operations**: Select multiple items for efficient batch linking
+- **AI Suggestions**: Intelligent recommendations based on content similarity and patterns
+- **Link Management**: View, edit, and remove item relationships with inline controls
+- **Visual Indicators**: Clear link count badges and relationship displays
+- **Preserved Specialization**: Full linking functionality while maintaining each list type's unique features
 
 ## 🔄 Real-time Features
 

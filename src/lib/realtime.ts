@@ -209,7 +209,7 @@ export class RealtimeManager {
     }
   }
 
-  private shouldNotifyChannel(channelName: string, table: string, payload: RealtimeChangePayload): boolean {
+  private shouldNotifyChannel(channelName: string, table: string, _payload: RealtimeChangePayload): boolean {
     // Extract table and ID from channel name (e.g., "items:list-123" or "lists:user-456")
     const [channelTable] = channelName.split(':')
 

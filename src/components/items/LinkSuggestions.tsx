@@ -58,7 +58,7 @@ export function LinkSuggestions({ sourceItem, onSuggestionApplied, onClose }: Li
       const candidateWords = candidateContent.split(/\s+/).filter(word => word.length > 2)
 
       let score = 0
-      let reasons: string[] = []
+      const reasons: string[] = []
 
       // Exact phrase matching
       if (candidateContent.includes(sourceContent) || sourceContent.includes(candidateContent)) {

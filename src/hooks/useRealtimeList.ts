@@ -1,8 +1,8 @@
-import { useEffect, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef } from 'react'
 import { realtimeManager, type RealtimeChangePayload, type RealtimeSubscription } from '../lib/realtime'
 import { useAuthStore } from '../stores'
-import type { List, Item } from '../types'
+import type { Item, List } from '../types'
 
 export function useRealtimeList(listId: string | null) {
   const queryClient = useQueryClient()
@@ -216,7 +216,7 @@ export function useRealtimeListsOverview() {
     // Subscribe to shared lists changes
     const sharedSubscription = realtimeManager.subscribeToSharedLists(
       user.email,
-      (payload: RealtimeChangePayload) => {
+      (_payload: RealtimeChangePayload) => {
         // When shares change, invalidate lists to refetch shared lists
         queryClient.invalidateQueries({ queryKey: ['lists'] })
       }
