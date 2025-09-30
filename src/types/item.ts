@@ -1,5 +1,5 @@
 // Import from enhanced-linking to avoid duplicate exports
-import type { EnhancedLinkedItems } from './enhanced-linking'
+import type { EnhancedLinkedItems, LinkedItemInfo } from './enhanced-linking'
 
 export interface Item {
   id: string

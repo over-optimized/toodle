@@ -171,7 +171,7 @@ export function ToastNotification() {
       ))}
 
       {/* Slide-in animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes slide-in-right {
           from {
             transform: translateX(100%);

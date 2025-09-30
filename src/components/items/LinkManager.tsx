@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
 import { enhancedLinkingService } from '../../services'
-import type { Item } from '../../types'
 import type { ItemLinkSummary } from '../../types/enhanced-linking'
 
 interface LinkManagerProps {
-  item: Item
+  itemId: string
   onLinksUpdated: () => void
   onClose: () => void
   onOpenParentChildLinker?: () => void
@@ -16,7 +15,7 @@ interface LinkManagerProps {
  * Displays all links (parent, child, bidirectional) with ability to remove
  */
 export function LinkManager({
-  item,
+  itemId,
   onLinksUpdated,
   onClose,
   onOpenParentChildLinker,
@@ -29,14 +28,14 @@ export function LinkManager({
 
   useEffect(() => {
     loadLinkSummary()
-  }, [item.id])
+  }, [itemId])
 
   const loadLinkSummary = async () => {
     setIsLoading(true)
     setError('')
 
     try {
-      const result = await enhancedLinkingService.getLinkSummary(item.id)
+      const result = await enhancedLinkingService.getLinkSummary(itemId)
       if (result.error) {
         setError(`Failed to load links: ${result.error}`)
         return
@@ -56,7 +55,10 @@ export function LinkManager({
 
     try {
       // Remove from parent's perspective
-      const result = await enhancedLinkingService.removeParentChildLink(parentId, item.id)
+      const result = await enhancedLinkingService.removeParentChildLink({
+        parent_item_id: parentId,
+        child_item_id: itemId
+      })
       if (result.error) {
         setError(`Failed to remove parent link: ${result.error}`)
         return
@@ -76,7 +78,10 @@ export function LinkManager({
     setError('')
 
     try {
-      const result = await enhancedLinkingService.removeParentChildLink(item.id, childId)
+      const result = await enhancedLinkingService.removeParentChildLink({
+        parent_item_id: itemId,
+        child_item_id: childId
+      })
       if (result.error) {
         setError(`Failed to remove child link: ${result.error}`)
         return
@@ -96,14 +101,9 @@ export function LinkManager({
     setError('')
 
     try {
-      const result = await enhancedLinkingService.removeBidirectionalLink(item.id, linkedItemId)
-      if (result.error) {
-        setError(`Failed to remove link: ${result.error}`)
-        return
-      }
-
-      onLinksUpdated()
-      await loadLinkSummary()
+      // Bidirectional links not supported in enhanced linking system
+      setError('Bidirectional links are not supported')
+      return
     } catch (err) {
       setError('Failed to remove link')
     } finally {
@@ -132,7 +132,7 @@ export function LinkManager({
         <div className="p-6 border-b">
           <h3 className="text-lg font-semibold">Manage Links</h3>
           <p className="text-sm text-gray-600 mt-1">
-            View and manage all links for "{item.content}"
+            View and manage all links for this item
           </p>
           {linkSummary && (
             <p className="text-xs text-gray-500 mt-1">

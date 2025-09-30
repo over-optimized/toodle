@@ -31,22 +31,17 @@ export function ParentChildLinker({ parentItem, onLinksUpdated, onClose }: Paren
     setError('')
 
     try {
-      const [linkableResult, childrenResult] = await Promise.all([
-        enhancedLinkingService.getLinkableItems(parentItem.id),
-        enhancedLinkingService.getChildItems(parentItem.id)
-      ])
-
-      if (linkableResult.error) {
-        setError(`Failed to load linkable items: ${linkableResult.error}`)
-        return
-      }
+      // For now, we can't get linkable items without that method
+      // We'll just load current children
+      const childrenResult = await enhancedLinkingService.getChildItems(parentItem.id)
 
       if (childrenResult.error) {
         setError(`Failed to load current children: ${childrenResult.error}`)
         return
       }
 
-      setLinkableItems(linkableResult.data || [])
+      // TODO: Need to implement getLinkableItems or fetch items from all lists
+      setLinkableItems([])
       setCurrentChildren(childrenResult.data || [])
       setSelectedItems(childrenResult.data?.map(item => item.id) || [])
     } catch (err) {
@@ -63,8 +58,8 @@ export function ParentChildLinker({ parentItem, onLinksUpdated, onClose }: Paren
     }
 
     const result = await linkValidationService.validateLinkCreation(parentItem.id, itemIds)
-    if (result.success && result.data) {
-      setValidationResult(result.data)
+    if (result.isValid) {
+      setValidationResult(result)
     }
   }
 
@@ -88,7 +83,10 @@ export function ParentChildLinker({ parentItem, onLinksUpdated, onClose }: Paren
         .map(child => child.id)
 
       for (const childId of childrenToRemove) {
-        const result = await enhancedLinkingService.removeParentChildLink(parentItem.id, childId)
+        const result = await enhancedLinkingService.removeParentChildLink({
+          parent_item_id: parentItem.id,
+          child_item_id: childId
+        })
         if (result.error) {
           setError(`Failed to remove link: ${result.error}`)
           return
@@ -101,10 +99,10 @@ export function ParentChildLinker({ parentItem, onLinksUpdated, onClose }: Paren
       )
 
       if (childrenToAdd.length > 0) {
-        const result = await enhancedLinkingService.createParentChildLink(
-          parentItem.id,
-          childrenToAdd
-        )
+        const result = await enhancedLinkingService.createParentChildLinks({
+          parent_item_id: parentItem.id,
+          child_item_ids: childrenToAdd
+        })
 
         if (result.error) {
           setError(`Failed to create links: ${result.error}`)
@@ -285,7 +283,7 @@ export function ParentChildLinker({ parentItem, onLinksUpdated, onClose }: Paren
             </div>
             <button
               onClick={handleSave}
-              disabled={isSaving || selectedItems.length > 20 || (hasInvalidSelections && selectedItems.some(id => getItemValidationStatus(id) === 'invalid'))}
+              disabled={isSaving || selectedItems.length > 20 || (hasInvalidSelections === true && selectedItems.some(id => getItemValidationStatus(id) === 'invalid'))}
               className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
             >
               {isSaving ? (

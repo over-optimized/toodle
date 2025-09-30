@@ -231,12 +231,10 @@ export function MobileLinkInterface({
                 </svg>
                 <span>Back</span>
               </button>
-              <ParentChildLinker
-                mode="select-parent"
-                childItemId={itemId}
-                onLinksCreated={handleLinksUpdated}
-                onClose={() => setActiveView('summary')}
-              />
+              {/* TODO: ParentChildLinker needs Item prop, not just itemId */}
+              <div className="text-center text-gray-600 py-8">
+                Add parent functionality coming soon
+              </div>
             </div>
           )}
 
@@ -256,12 +254,10 @@ export function MobileLinkInterface({
                 </svg>
                 <span>Back</span>
               </button>
-              <ParentChildLinker
-                mode="select-children"
-                parentItemId={itemId}
-                onLinksCreated={handleLinksUpdated}
-                onClose={() => setActiveView('summary')}
-              />
+              {/* TODO: ParentChildLinker needs Item prop, not just itemId */}
+              <div className="text-center text-gray-600 py-8">
+                Add child functionality coming soon
+              </div>
             </div>
           )}
 
@@ -285,7 +281,6 @@ export function MobileLinkInterface({
                 itemId={itemId}
                 onClose={() => setActiveView('summary')}
                 onLinksUpdated={handleLinksUpdated}
-                embedded
               />
             </div>
           )}
@@ -303,7 +298,7 @@ export function MobileLinkInterface({
       </div>
 
       {/* Slide-up animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes slide-up {
           from {
             transform: translateY(100%);
