@@ -1,8 +1,11 @@
 import { supabase } from '../lib/supabase'
+import { statusPropagationService } from './status-propagation.service'
+import { enhancedLinkingService } from './enhanced-linking.service'
 import type {
   Item,
   CreateItemRequest,
-  UpdateItemRequest
+  UpdateItemRequest,
+  UpdateItemWithPropagationResponse
 } from '../types'
 
 export class ItemService {
@@ -57,10 +60,89 @@ export class ItemService {
     }
   }
 
+  /**
+   * Update item with automatic status propagation
+   * If item is a parent and moves from completed → todo, resets completed children to todo
+   */
+  async updateItemWithPropagation(
+    id: string,
+    request: UpdateItemRequest
+  ): Promise<{ data: UpdateItemWithPropagationResponse | null; error: string | null }> {
+    try {
+      const result = await statusPropagationService.updateWithPropagation({
+        item_id: id,
+        new_content: request.content,
+        new_is_completed: request.is_completed,
+        new_target_date: request.target_date,
+        new_position: request.position
+      })
+
+      return result
+    } catch (error) {
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  /**
+   * Update item status with propagation
+   * Convenience method for toggling completion status
+   */
+  async updateItemStatus(
+    id: string,
+    isCompleted: boolean
+  ): Promise<{ data: UpdateItemWithPropagationResponse | null; error: string | null }> {
+    return statusPropagationService.updateItemStatus(id, isCompleted)
+  }
+
+  /**
+   * Preview status propagation impact before updating
+   * Shows which items would be affected by status change
+   */
+  async previewStatusChange(id: string, newStatus: boolean) {
+    return statusPropagationService.previewPropagation(id, newStatus)
+  }
+
+  /**
+   * Get link summary for an item (children, parents, bidirectional)
+   */
+  async getItemLinks(itemId: string) {
+    return enhancedLinkingService.getLinkSummary(itemId)
+  }
+
+  /**
+   * Check if item has parent-child relationships
+   */
+  async hasParentChildRelationships(itemId: string) {
+    return enhancedLinkingService.hasRelationships(itemId)
+  }
+
+  /**
+   * Create parent-child links
+   */
+  async createParentChildLinks(parentItemId: string, childItemIds: string[]) {
+    return enhancedLinkingService.createParentChildLinks({
+      parent_item_id: parentItemId,
+      child_item_ids: childItemIds
+    })
+  }
+
+  /**
+   * Remove parent-child link
+   */
+  async removeParentChildLink(parentItemId: string, childItemId: string) {
+    return enhancedLinkingService.removeParentChildLink({
+      parent_item_id: parentItemId,
+      child_item_id: childItemId
+    })
+  }
+
   async deleteItem(id: string): Promise<{ error: string | null }> {
     try {
-      // First, remove this item from any linked_items arrays
-      await this.removeFromAllLinkedItems(id)
+      // First, remove all links (parent-child and bidirectional)
+      await enhancedLinkingService.removeAllLinks(id)
 
       // Then delete the item
       const { error } = await supabase
@@ -163,28 +245,6 @@ export class ItemService {
       .limit(1)
 
     return ((data as any)?.[0]?.position || 0) + 1
-  }
-
-  private async removeFromAllLinkedItems(itemId: string): Promise<void> {
-    // Find all items that link to this item
-    const { data: linkingItems } = await supabase
-      .from('items')
-      .select('id, linked_items')
-      .contains('linked_items', [itemId])
-
-    if (linkingItems && linkingItems.length > 0) {
-      // Update each item to remove the deleted item from its links
-      const updates = linkingItems.map(async (item: any) => {
-        const newLinks = (item.linked_items || []).filter((linkId: string) => linkId !== itemId)
-        // @ts-ignore - Supabase type inference issue with jsonb field
-        return supabase
-          .from('items')
-          .update({ linked_items: newLinks })
-          .eq('id', item.id)
-      })
-
-      await Promise.all(updates)
-    }
   }
 }
 

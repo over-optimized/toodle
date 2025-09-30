@@ -48,24 +48,24 @@ Transform the existing informational cross-list linking system into a behavioral
 - [x] T018 [P] Circular dependency validation logic in src/utils/link-validation.ts (✓ Implemented DFS cycle detection, comprehensive validation, hierarchy depth calculation)
 
 ## Phase 3.4: Core Services Layer
-- [ ] T019 Enhanced linking service with parent-child operations in src/services/linking.ts
-- [ ] T020 Status propagation service for automated updates in src/services/status-propagation.ts
-- [ ] T021 Item update service integration with propagation logic in src/services/items.ts
-- [ ] T022 Link validation service with cycle detection in src/services/link-validation.ts
+- [x] T019 Enhanced linking service with parent-child operations in src/services/enhanced-linking.service.ts (✓ Created EnhancedLinkingService with createParentChildLinks, removeParentChildLink, getChildItems, getParentItems, getLinkSummary, validateLinks, checkCircularDependency, hasRelationships, removeAllLinks, batchCreateLinks, getLinkStatistics)
+- [x] T020 Status propagation service for automated updates in src/services/status-propagation.service.ts (✓ Created StatusPropagationService with updateWithPropagation, previewPropagation, getAffectedItems, wouldPropagate, updateItemStatus, forcePropagate, calculatePropagationImpact, batchUpdateWithPropagation, subscribeToPropagationEvents)
+- [x] T021 Item update service integration with propagation logic in src/services/item.service.ts (✓ Integrated with ItemService: added updateItemWithPropagation, updateItemStatus, previewStatusChange, getItemLinks, hasParentChildRelationships, createParentChildLinks, removeParentChildLink; updated deleteItem to use enhancedLinkingService)
+- [x] T022 Link validation service with cycle detection in src/services/link-validation.service.ts (✓ Created LinkValidationService facade with checkCircularDependency, validateLinkCreation, validateLinkRemoval, findPropagationAffectedItems, checkDeletionImpact, validateStatusChange, batchValidateLinkCreation, validateItemMove, getItemValidationSummary)
 
 ## Phase 3.5: Frontend Components Enhancement
-- [ ] T023 Enhanced LinkIndicator component with directional arrows in src/components/items/LinkIndicator.tsx
-- [ ] T024 Parent-child link creation modal in src/components/items/ParentChildLinker.tsx
-- [ ] T025 Enhanced ItemLinker modal with parent-first workflow in src/components/items/ItemLinker.tsx
-- [ ] T026 Link management interface for viewing/removing links in src/components/items/LinkManager.tsx
-- [ ] T027 [P] Remove bulk linking from ActionMenu component in src/components/lists/ActionMenu.tsx
-- [ ] T028 [P] Update BulkLinker component to disable hierarchical operations in src/components/lists/BulkLinker.tsx
+- [x] T023 Enhanced LinkIndicator component with directional arrows in src/components/items/LinkIndicator.tsx
+- [x] T024 Parent-child link creation modal in src/components/items/ParentChildLinker.tsx
+- [x] T025 Enhanced ItemLinker modal with parent-first workflow in src/components/items/ItemLinker.tsx
+- [x] T026 Link management interface for viewing/removing links in src/components/items/LinkManager.tsx
+- [x] T027 [P] Remove bulk linking from ActionMenu component in src/components/lists/ActionMenu.tsx
+- [x] T028 [P] Update BulkLinker component to disable hierarchical operations in src/components/lists/BulkLinker.tsx
 
 ## Phase 3.6: State Management Integration
-- [ ] T029 Enhanced item state with parent-child metadata in src/hooks/useRealtimeList.ts
-- [ ] T030 TanStack Query integration for linking operations in src/hooks/useLinking.ts
-- [ ] T031 Real-time sync for propagated status updates in src/hooks/useStatusPropagation.ts
-- [ ] T032 Optimistic updates for parent-child operations in src/hooks/useItems.ts
+- [x] T029 Enhanced item state with parent-child metadata in src/hooks/useRealtimeList.ts (✓ Added propagation detection, link change tracking, and cross-list invalidation)
+- [x] T030 TanStack Query integration for linking operations in src/hooks/useLinking.ts (✓ Created useLinking hook with childItems, parentItems, linkSummary queries; createParentChildLink, removeParentChildLink, bulkCreateLinks mutations; optimistic updates and rollback)
+- [x] T031 Real-time sync for propagated status updates in src/hooks/useStatusPropagation.ts (✓ Created useStatusPropagation hook with updateItemWithPropagation, updateItemStatus mutations; usePropagationPreview query; event subscriptions for background propagation)
+- [x] T032 Optimistic updates for parent-child operations in src/hooks/useItems.ts (✓ Enhanced useItems with link metadata; added useItemsWithLinkDetails; created useItemMutations with optimistic updates for create, update, delete, reorder)
 
 ## Phase 3.7: UI Integration & Polish
 - [ ] T033 [P] Visual indicator display logic in item components in src/components/items/Item.tsx

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { linkingService } from '../../services'
+import { enhancedLinkingService } from '../../services'
 import type { Item, LinkedItemInfo } from '../../types'
 
 interface ItemLinkerProps {
@@ -8,11 +8,17 @@ interface ItemLinkerProps {
   onClose: () => void
 }
 
+/**
+ * Modal for creating bidirectional/informational links between items
+ * Does not establish parent-child hierarchical relationships
+ * Use ParentChildLinker for hierarchical relationships
+ */
 export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerProps) {
   const [linkableItems, setLinkableItems] = useState<Item[]>([])
   const [currentLinks, setCurrentLinks] = useState<LinkedItemInfo[]>([])
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -24,9 +30,9 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
     setError('')
 
     try {
-      const [linkableResult, currentLinksResult] = await Promise.all([
-        linkingService.getLinkableItems(sourceItem.id),
-        linkingService.getLinkedItemsInfo(sourceItem.id)
+      const [linkableResult, summaryResult] = await Promise.all([
+        enhancedLinkingService.getLinkableItems(sourceItem.id),
+        enhancedLinkingService.getLinkSummary(sourceItem.id)
       ])
 
       if (linkableResult.error) {
@@ -34,14 +40,16 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
         return
       }
 
-      if (currentLinksResult.error) {
-        setError(`Failed to load current links: ${currentLinksResult.error}`)
+      if (summaryResult.error) {
+        setError(`Failed to load current links: ${summaryResult.error}`)
         return
       }
 
       setLinkableItems(linkableResult.data || [])
-      setCurrentLinks(currentLinksResult.data || [])
-      setSelectedItems(currentLinksResult.data?.map(item => item.id) || [])
+      // Only show bidirectional links in this UI
+      const bidirectionalLinks = summaryResult.data?.bidirectional || []
+      setCurrentLinks(bidirectionalLinks)
+      setSelectedItems(bidirectionalLinks.map(item => item.id))
     } catch (err) {
       setError('Failed to load linking data')
     } finally {
@@ -59,9 +67,10 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
 
   const handleSave = async () => {
     setError('')
+    setIsSaving(true)
 
     try {
-      const result = await linkingService.replaceLinks(sourceItem.id, selectedItems)
+      const result = await enhancedLinkingService.replaceBidirectionalLinks(sourceItem.id, selectedItems)
 
       if (result.error) {
         setError(`Failed to update links: ${result.error}`)
@@ -72,6 +81,8 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
       onClose()
     } catch (err) {
       setError('Failed to save links')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -110,9 +121,15 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[80vh] flex flex-col">
         <div className="p-6 border-b">
-          <h3 className="text-lg font-semibold">Link Items</h3>
+          <h3 className="text-lg font-semibold flex items-center">
+            <span className="text-blue-600 mr-2">↔</span>
+            Link Related Items
+          </h3>
           <p className="text-sm text-gray-600 mt-1">
-            Link "{sourceItem.content}" to items from other lists
+            Create informational links between "{sourceItem.content}" and items from other lists
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            These links are non-hierarchical and don't affect status propagation
           </p>
           {currentLinks.length > 0 && (
             <p className="text-xs text-blue-600 mt-1">
@@ -167,20 +184,28 @@ export function ItemLinker({ sourceItem, onLinksUpdated, onClose }: ItemLinkerPr
         <div className="border-t p-6 flex justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            disabled={isSaving}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50"
           >
             Cancel
           </button>
-          <div className="flex space-x-3">
-            <div className="text-sm text-gray-500 self-center">
+          <div className="flex space-x-3 items-center">
+            <div className="text-sm text-gray-500">
               {selectedItems.length} / 50 items selected
             </div>
             <button
               onClick={handleSave}
-              disabled={selectedItems.length > 50}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              disabled={isSaving || selectedItems.length > 50}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
             >
-              Save Links
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                'Save Links'
+              )}
             </button>
           </div>
         </div>

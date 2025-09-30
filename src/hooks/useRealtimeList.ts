@@ -79,6 +79,9 @@ export function useRealtimeList(listId: string | null) {
 
       case 'UPDATE':
         if (newItem) {
+          // Detect if this update was caused by status propagation
+          const wasPropagated = detectPropagation(oldItem, newItem)
+
           // Update existing item in cache
           queryClient.setQueryData(
             ['items', listId],
@@ -91,15 +94,50 @@ export function useRealtimeList(listId: string | null) {
             }
           )
 
-          // Show notification for completed items
-          if (oldItem && !oldItem.is_completed && newItem.is_completed) {
+          // Show notification for status changes
+          if (oldItem && oldItem.is_completed !== newItem.is_completed) {
+            if (wasPropagated) {
+              // Propagated status change
+              window.dispatchEvent(new CustomEvent('realtime-notification', {
+                detail: {
+                  type: 'status-propagated',
+                  message: `"${newItem.content}" status propagated to ${newItem.is_completed ? 'completed' : 'todo'}`,
+                  listId,
+                  isPropagation: true
+                }
+              }))
+            } else if (newItem.is_completed) {
+              // User-initiated completion
+              window.dispatchEvent(new CustomEvent('realtime-notification', {
+                detail: {
+                  type: 'item-completed',
+                  message: `Item completed: "${newItem.content}"`,
+                  listId
+                }
+              }))
+            }
+          }
+
+          // Detect link changes (parent-child relationships added/removed)
+          if (hasLinkChanges(oldItem, newItem)) {
+            // Invalidate link-related queries
+            queryClient.invalidateQueries({ queryKey: ['item', newItem.id, 'children'] })
+            queryClient.invalidateQueries({ queryKey: ['item', newItem.id, 'parents'] })
+            queryClient.invalidateQueries({ queryKey: ['item', newItem.id, 'link-summary'] })
+
             window.dispatchEvent(new CustomEvent('realtime-notification', {
               detail: {
-                type: 'item-completed',
-                message: `Item completed: "${newItem.content}"`,
+                type: 'links-updated',
+                message: `Links updated for "${newItem.content}"`,
                 listId
               }
             }))
+          }
+
+          // If this item has children/parents and status changed, others may be affected
+          if (wasPropagated && hasParentChildLinks(newItem)) {
+            // Invalidate all items queries to catch cross-list propagation
+            queryClient.invalidateQueries({ queryKey: ['items'] })
           }
         }
         break
@@ -115,6 +153,11 @@ export function useRealtimeList(listId: string | null) {
             }
           )
 
+          // If deleted item had links, invalidate related items
+          if (hasParentChildLinks(oldItem)) {
+            queryClient.invalidateQueries({ queryKey: ['items'] })
+          }
+
           window.dispatchEvent(new CustomEvent('realtime-notification', {
             detail: {
               type: 'item-deleted',
@@ -128,6 +171,49 @@ export function useRealtimeList(listId: string | null) {
 
     // Invalidate list query to update item counts, etc.
     queryClient.invalidateQueries({ queryKey: ['list', listId] })
+  }
+
+  // Helper: Detect if an update was caused by status propagation
+  const detectPropagation = (oldItem: Item | null, newItem: Item): boolean => {
+    if (!oldItem) return false
+
+    // Propagation indicators:
+    // 1. Status changed
+    // 2. Item has parents (child being propagated to)
+    // 3. Updated timestamp is very recent (< 1 second from now)
+    const statusChanged = oldItem.is_completed !== newItem.is_completed
+    const hasParents = hasParentChildLinks(newItem) &&
+      newItem.linked_items &&
+      typeof newItem.linked_items === 'object' &&
+      'parents' in newItem.linked_items &&
+      Array.isArray(newItem.linked_items.parents) &&
+      newItem.linked_items.parents.length > 0
+
+    const isRecentUpdate = newItem.updated_at &&
+      new Date(newItem.updated_at).getTime() > Date.now() - 1000
+
+    return statusChanged && hasParents && isRecentUpdate
+  }
+
+  // Helper: Check if linked_items changed
+  const hasLinkChanges = (oldItem: Item | null, newItem: Item): boolean => {
+    if (!oldItem) return false
+
+    const oldLinks = JSON.stringify(oldItem.linked_items)
+    const newLinks = JSON.stringify(newItem.linked_items)
+
+    return oldLinks !== newLinks
+  }
+
+  // Helper: Check if item has parent-child links
+  const hasParentChildLinks = (item: Item): boolean => {
+    if (!item.linked_items || typeof item.linked_items !== 'object') return false
+
+    const links = item.linked_items as any
+    const hasChildren = Array.isArray(links.children) && links.children.length > 0
+    const hasParents = Array.isArray(links.parents) && links.parents.length > 0
+
+    return hasChildren || hasParents
   }
 
   const handleListChange = (payload: RealtimeChangePayload<List>) => {

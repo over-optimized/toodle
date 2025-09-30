@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { linkingService } from '../../services'
+import { enhancedLinkingService } from '../../services'
 import type { Item, BulkLinkOperation } from '../../types'
 
 interface BulkLinkerProps {
@@ -8,6 +8,12 @@ interface BulkLinkerProps {
   onClose: () => void
 }
 
+/**
+ * Bulk Linker Component
+ * IMPORTANT: This component only supports bidirectional/informational links
+ * Parent-child hierarchical relationships CANNOT be created via bulk operations
+ * to avoid ambiguous relationship directions
+ */
 export function BulkLinker({ selectedItems, onOperationComplete, onClose }: BulkLinkerProps) {
   const [targetItems, setTargetItems] = useState<Item[]>([])
   const [selectedTargets, setSelectedTargets] = useState<string[]>([])
@@ -29,7 +35,7 @@ export function BulkLinker({ selectedItems, onOperationComplete, onClose }: Bulk
 
     try {
       // Get linkable items for the first selected item as a base
-      const result = await linkingService.getLinkableItems(selectedItems[0].id)
+      const result = await enhancedLinkingService.getLinkableItems(selectedItems[0].id)
 
       if (result.error) {
         setError(result.error)
@@ -64,19 +70,27 @@ export function BulkLinker({ selectedItems, onOperationComplete, onClose }: Bulk
 
     try {
       // Perform operation for each selected source item
+      // Only bidirectional/informational links are created (no hierarchical relationships)
       for (const sourceItem of selectedItems) {
-        const bulkOp: BulkLinkOperation = {
-          sourceItemId: sourceItem.id,
-          targetItemIds: selectedTargets,
-          operation
-        }
+        let result
 
-        const result = await linkingService.performBulkOperation(bulkOp)
+        if (operation === 'add') {
+          result = await enhancedLinkingService.addBidirectionalLinks(sourceItem.id, selectedTargets)
+        } else if (operation === 'remove') {
+          // Remove each selected target individually
+          for (const targetId of selectedTargets) {
+            result = await enhancedLinkingService.removeBidirectionalLink(sourceItem.id, targetId)
+            if (result.error) break
+          }
+        } else {
+          // Replace
+          result = await enhancedLinkingService.replaceBidirectionalLinks(sourceItem.id, selectedTargets)
+        }
 
         operationResults.push({
           itemId: sourceItem.id,
-          success: !result.error,
-          error: result.error || undefined
+          success: !result?.error,
+          error: result?.error || undefined
         })
       }
 
@@ -141,10 +155,21 @@ export function BulkLinker({ selectedItems, onOperationComplete, onClose }: Bulk
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[80vh] flex flex-col">
         <div className="p-6 border-b">
-          <h3 className="text-lg font-semibold">Bulk Link Operation</h3>
+          <h3 className="text-lg font-semibold flex items-center">
+            <span className="text-blue-600 mr-2">↔</span>
+            Bulk Link Operation
+          </h3>
           <p className="text-sm text-gray-600 mt-1">
             {selectedItems.length} item(s) selected for bulk linking
           </p>
+
+          {/* Warning about hierarchical operations */}
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-xs text-yellow-800">
+              <strong>Note:</strong> This creates informational links only. For parent-child hierarchical
+              relationships with status propagation, use the individual item link menu.
+            </p>
+          </div>
 
           {/* Operation Type Selection */}
           <div className="mt-4">
