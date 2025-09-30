@@ -68,10 +68,10 @@ Transform the existing informational cross-list linking system into a behavioral
 - [x] T032 Optimistic updates for parent-child operations in src/hooks/useItems.ts (✓ Enhanced useItems with link metadata; added useItemsWithLinkDetails; created useItemMutations with optimistic updates for create, update, delete, reorder)
 
 ## Phase 3.7: UI Integration & Polish
-- [ ] T033 [P] Visual indicator display logic in item components in src/components/items/Item.tsx
-- [ ] T034 [P] Mobile-friendly touch interface for link management in src/components/items/MobileLinkInterface.tsx
-- [ ] T035 Error handling and user feedback for failed operations in src/components/shared/ErrorBoundary.tsx
-- [ ] T036 Performance optimization for large link chains in src/utils/performance-optimization.ts
+- [x] T033 [P] Visual indicator display logic in item components in src/components/items/ItemList.tsx (✓ Integrated LinkIndicator with useLinking hook; added clickable indicators to open LinkManager; integrated useStatusPropagation for automatic parent-child propagation on status toggle)
+- [x] T034 [P] Mobile-friendly touch interface for link management in src/components/items/MobileLinkInterface.tsx (✓ Created mobile-optimized bottom sheet with 44px+ touch targets; quick actions for add parent/child; integrated with ParentChildLinker and LinkManager; slide-up animation)
+- [x] T035 Error handling and user feedback for failed operations in src/components/shared/ErrorBoundary.tsx (✓ Created ErrorBoundary component with fallback UI; created ToastNotification system listening to link-notification, propagation-notification, realtime-notification events; programmatic toast API)
+- [x] T036 Performance optimization for large link chains in src/utils/performance-optimization.ts (✓ Created utilities: debounce, throttle, useDebounce, useThrottle, memoize, batch updates, processInChunks, getVisibleRange for virtual scrolling, useIntersectionObserver for lazy loading, TTLCache, performanceMonitor)
 
 ## Phase 3.8: Validation & Polish
 - [ ] T037 [P] Unit tests for link validation utilities in tests/unit/test_link_validation.test.ts

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useItemMutations } from '../../hooks'
+import { useItemMutations, useStatusPropagation } from '../../hooks'
 import type { Item, ListType } from '../../types'
 import { formatDistanceToNow, isAfter, parseISO } from 'date-fns'
 import { LinkIndicator } from './LinkIndicator'
@@ -8,6 +8,7 @@ import { ItemLinker } from './ItemLinker'
 import { QuickLinkAdd } from './QuickLinkAdd'
 import { BulkLinker } from './BulkLinker'
 import { LinkSuggestions } from './LinkSuggestions'
+import { LinkManager } from './LinkManager'
 
 interface ItemListProps {
   items: Item[]
@@ -22,12 +23,14 @@ export function ItemList({ items, listId, listType, enableBulkOperations = false
   const [editTargetDate, setEditTargetDate] = useState('')
   const [showLinksFor, setShowLinksFor] = useState<string | null>(null)
   const [linkingItemId, setLinkingItemId] = useState<string | null>(null)
+  const [linkManagerItemId, setLinkManagerItemId] = useState<string | null>(null)
   const [quickLinkItemId, setQuickLinkItemId] = useState<string | null>(null)
   const [suggestionsItemId, setSuggestionsItemId] = useState<string | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [showBulkLinker, setShowBulkLinker] = useState(false)
 
   const { updateItem, deleteItem } = useItemMutations(listId)
+  const { updateItemStatus } = useStatusPropagation(listId)
 
   const handleEdit = (item: Item) => {
     setEditingId(item.id)
@@ -66,9 +69,10 @@ export function ItemList({ items, listId, listType, enableBulkOperations = false
     if (!item) return
 
     try {
-      await updateItem.mutateAsync({
-        id: id,
-        request: { is_completed: !item.is_completed }
+      // Use status propagation hook for automatic parent-child propagation
+      await updateItemStatus.mutateAsync({
+        itemId: id,
+        isCompleted: !item.is_completed
       })
     } catch (error) {
       console.error('Failed to toggle item completion:', error)
@@ -258,7 +262,10 @@ export function ItemList({ items, listId, listType, enableBulkOperations = false
                   }`}>
                     {item.content}
                   </p>
-                  <LinkIndicator itemId={item.id} />
+                  <LinkIndicator
+                    itemId={item.id}
+                    onClick={() => setLinkManagerItemId(item.id)}
+                  />
                 </div>
 
                 {item.target_date && (
@@ -358,6 +365,14 @@ export function ItemList({ items, listId, listType, enableBulkOperations = false
           sourceItem={items.find(item => item.id === suggestionsItemId)!}
           onSuggestionApplied={handleLinksUpdated}
           onClose={() => setSuggestionsItemId(null)}
+        />
+      )}
+
+      {linkManagerItemId && (
+        <LinkManager
+          itemId={linkManagerItemId}
+          onClose={() => setLinkManagerItemId(null)}
+          onLinksUpdated={handleLinksUpdated}
         />
       )}
 
