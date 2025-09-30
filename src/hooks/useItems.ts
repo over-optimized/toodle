@@ -105,7 +105,7 @@ export function useItemMutations(listId: string) {
         position: request.position ?? 999,
         is_completed: false,
         target_date: request.target_date,
-        completed_at: null,
+        completed_at: undefined,
         linked_items: undefined,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),

@@ -1,9 +1,5 @@
-// Enhanced linked_items structure supporting directional relationships
-export interface EnhancedLinkedItems {
-  children?: string[]      // Items this item is a parent of
-  parents?: string[]       // Items this item is a child of
-  bidirectional?: string[] // Non-hierarchical informational links
-}
+// Import from enhanced-linking to avoid duplicate exports
+import type { EnhancedLinkedItems } from './enhanced-linking'
 
 export interface Item {
   id: string
@@ -27,14 +23,7 @@ export interface ItemHistory {
   created_at: string
 }
 
-export interface LinkedItemInfo {
-  id: string
-  list_id: string
-  content: string
-  is_completed: boolean
-  list_title: string
-  list_type: string
-}
+// LinkedItemInfo is exported from enhanced-linking.ts to avoid duplicates
 
 export interface ItemLinkingSummary {
   totalLinkedTo: number

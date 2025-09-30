@@ -13,7 +13,6 @@ import { supabase } from '../lib/supabase'
 import type {
   UpdateItemWithPropagationRequest,
   UpdateItemWithPropagationResponse,
-  PreviewStatusPropagationRequest,
   PreviewStatusPropagationResponse,
   StatusPropagationEvent
 } from '../types/enhanced-linking'
@@ -178,7 +177,7 @@ export class StatusPropagationService {
    * @param itemId - Item ID
    * @returns Recent propagation events
    */
-  async getPropagationHistory(itemId: string): Promise<{
+  async getPropagationHistory(_itemId: string): Promise<{
     data: StatusPropagationEvent[] | null
     error: string | null
   }> {

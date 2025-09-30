@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useLinking } from '../../hooks'
-import type { LinkedItemInfo } from '../../types'
 import { ParentChildLinker } from './ParentChildLinker'
 import { LinkManager } from './LinkManager'
 

@@ -234,11 +234,8 @@ export function useLinking(itemId: string) {
   // Mutation: Bulk create links (for multiple children at once)
   const bulkCreateLinks = useMutation({
     mutationFn: async (request: CreateParentChildLinkRequest) => {
-      // Use batch creation if available, otherwise fall back to single call
-      const result = await enhancedLinkingService.batchCreateLinks(
-        request.parent_item_id,
-        request.child_item_ids
-      )
+      // Use batch creation - convert single request to array format
+      const result = await enhancedLinkingService.batchCreateLinks([request])
       if (result.error) {
         throw new Error(result.error)
       }

@@ -1,5 +1,4 @@
 import { useLinking } from '../../hooks'
-import type { ItemLinkSummary } from '../../types/enhanced-linking'
 
 interface LinkIndicatorProps {
   itemId: string

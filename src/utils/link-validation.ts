@@ -6,11 +6,10 @@
 
 import { supabase } from '../lib/supabase'
 import type {
-  EnhancedLinkedItems,
   CircularDependencyCheck,
   LinkValidationResult
 } from '../types/enhanced-linking'
-import { isEnhancedLinkedItems, getAllLinkedIds } from '../types/enhanced-linking'
+import { isEnhancedLinkedItems } from '../types/enhanced-linking'
 
 /**
  * Check if creating a link would create a circular dependency
