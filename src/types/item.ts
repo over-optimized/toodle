@@ -8,7 +8,7 @@ export interface Item {
   is_completed: boolean
   position: number
   target_date?: string
-  completed_at?: string
+  completed_at?: string | null
   created_at: string
   updated_at: string
   // Support both legacy array format and new object format

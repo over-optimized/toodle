@@ -33,7 +33,7 @@ export async function createParentChildLink(
     const { data, error } = await supabase.rpc('create_parent_child_link', {
       parent_item_id: request.parent_item_id,
       child_item_ids: request.child_item_ids
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -61,7 +61,7 @@ export async function removeParentChildLink(
     const { data, error } = await supabase.rpc('remove_parent_child_link', {
       parent_item_id: request.parent_item_id,
       child_item_id: request.child_item_id
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -90,7 +90,7 @@ export async function validateLinkCreation(
     const { data, error } = await supabase.rpc('validate_link_creation', {
       parent_item_id: request.parent_item_id,
       child_item_ids: request.child_item_ids
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -118,7 +118,7 @@ export async function getChildItems(
   try {
     const { data, error } = await supabase.rpc('get_child_items', {
       parent_item_id: request.parent_item_id
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -146,7 +146,7 @@ export async function getParentItems(
   try {
     const { data, error } = await supabase.rpc('get_parent_items', {
       child_item_id: request.child_item_id
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -179,7 +179,7 @@ export async function updateItemWithPropagation(
       new_target_date: request.new_target_date || null,
       new_position: request.new_position !== undefined ? request.new_position : null,
       new_linked_items: request.new_linked_items || null
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
@@ -208,7 +208,7 @@ export async function previewStatusPropagation(
     const { data, error } = await supabase.rpc('preview_status_propagation', {
       item_id: request.item_id,
       new_status: request.new_status
-    })
+    } as any)
 
     if (error) {
       return { data: null, error: error.message }
