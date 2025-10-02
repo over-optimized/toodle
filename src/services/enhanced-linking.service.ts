@@ -7,7 +7,6 @@
 import {
   createParentChildLink as dbCreateParentChildLink,
   removeParentChildLink as dbRemoveParentChildLink,
-  validateLinkCreation as dbValidateLinkCreation,
   getChildItems as dbGetChildItems,
   getParentItems as dbGetParentItems,
   getItemLinkSummary,

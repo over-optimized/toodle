@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useLinking } from '../../hooks'
-import { ParentChildLinker } from './ParentChildLinker'
 import { LinkManager } from './LinkManager'
 
 interface MobileLinkInterfaceProps {
