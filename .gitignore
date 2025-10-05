@@ -118,3 +118,5 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+tests/e2e/.auth/
+.e2e-db-clean

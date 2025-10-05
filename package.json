@@ -11,6 +11,11 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "bash scripts/test-e2e.sh",
+    "test:playwright": "playwright test",
+    "test:playwright:ui": "playwright test --ui",
+    "test:playwright:headed": "playwright test --headed",
+    "test:playwright:debug": "playwright test --debug",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx}\"",
     "type-check": "tsc --noEmit",
     "ci": "pnpm lint && pnpm test:coverage && pnpm build",
@@ -32,7 +37,6 @@
     "autoprefixer": "^10.4.21",
     "date-fns": "^4.1.0",
     "dexie": "^4.2.0",
-    "playwright": "^1.55.0",
     "postcss": "^8.5.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -45,6 +49,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.1",
     "@types/react": "^18.3.24",
     "@types/react-dom": "^18.3.7",
     "@types/uuid": "^11.0.0",
